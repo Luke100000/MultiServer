@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "multiserver",
+  "version": "${version}",
+  "name": "MultiServer",
+  "description": "",
+  "authors": [],
+  "contact": {"repo": "https://github.com/jonas/MultiServer"},
+  "license": "MIT",
+  "icon": "assets/multiserver/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "client": [], "main": ["net.conczin.multiserver.MultiServer"]
+  },
+  "mixins": [
+    "multiserver.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "${minecraft_version}"
+  }
+}
