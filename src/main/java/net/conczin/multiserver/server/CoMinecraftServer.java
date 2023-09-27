@@ -42,7 +42,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 
 public class CoMinecraftServer extends MinecraftServer implements ServerInterface {
     static final Logger LOGGER = LogUtils.getLogger();
@@ -63,6 +65,17 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
         this.settings = settings;
         this.rconConsoleSource = new RconConsoleSource(this);
         this.textFilterClient = TextFilterClient.createFromConfig(settings.getProperties().textFilteringConfig);
+    }
+
+    public static <S extends CoMinecraftServer> S spinCoServer(Function<Thread, S> function) {
+        AtomicReference<CoMinecraftServer> atomicReference = new AtomicReference<>();
+        Thread serverThread = new Thread(() -> atomicReference.get().runServer(), "Server thread");
+        serverThread.setUncaughtExceptionHandler((thread, throwable) -> LOGGER.error("Uncaught exception in server thread", throwable));
+        serverThread.setPriority(7);
+        S server = function.apply(serverThread);
+        atomicReference.set(server);
+        serverThread.start();
+        return server;
     }
 
     public boolean initServer() throws IOException {

@@ -153,7 +153,7 @@ public class MultiServerManager {
             }
             WorldData worldData = worldStem.worldData();
             levelStorageAccess.saveDataTag(frozen, worldData);
-            final CoMinecraftServer dedicatedServer = MinecraftServer.spin(thread -> {
+            final CoMinecraftServer dedicatedServer = CoMinecraftServer.spinCoServer(thread -> {
                 currentSettings = SETTINGS.get(root);
                 CoMinecraftServer server = new CoMinecraftServer(thread, root, levelStorageAccess, packRepository, worldStem, dedicatedServerSettings, DataFixers.getDataFixer(), services, LoggerChunkProgressListener::new);
                 server.setPort(port);
