@@ -14,7 +14,7 @@ import java.io.IOException;
 public class CoServerPlayerList extends PlayerList {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public CoServerPlayerList(CoServerInstance dedicatedServer, LayeredRegistryAccess<RegistryLayer> layeredRegistryAccess, PlayerDataStorage playerDataStorage) {
+    public CoServerPlayerList(CoMinecraftServer dedicatedServer, LayeredRegistryAccess<RegistryLayer> layeredRegistryAccess, PlayerDataStorage playerDataStorage) {
         super(dedicatedServer, layeredRegistryAccess, playerDataStorage, dedicatedServer.getProperties().maxPlayers);
         DedicatedServerProperties dedicatedServerProperties = dedicatedServer.getProperties();
         this.setViewDistance(dedicatedServerProperties.viewDistance);
@@ -125,8 +125,8 @@ public class CoServerPlayerList extends PlayerList {
     }
 
     @Override
-    public CoServerInstance getServer() {
-        return (CoServerInstance) super.getServer();
+    public CoMinecraftServer getServer() {
+        return (CoMinecraftServer) super.getServer();
     }
 
     @Override

@@ -44,7 +44,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
-public class CoServerInstance extends MinecraftServer implements ServerInterface {
+public class CoMinecraftServer extends MinecraftServer implements ServerInterface {
     static final Logger LOGGER = LogUtils.getLogger();
     private final List<ConsoleInput> consoleInput = Collections.synchronizedList(Lists.newArrayList());
     private final String root;
@@ -57,7 +57,7 @@ public class CoServerInstance extends MinecraftServer implements ServerInterface
     @Nullable
     private final TextFilterClient textFilterClient;
 
-    public CoServerInstance(Thread thread, String root, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, DedicatedServerSettings settings, DataFixer dataFixer, Services services, ChunkProgressListenerFactory chunkProgressListenerFactory) {
+    public CoMinecraftServer(Thread thread, String root, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, DedicatedServerSettings settings, DataFixer dataFixer, Services services, ChunkProgressListenerFactory chunkProgressListenerFactory) {
         super(thread, levelStorageAccess, packRepository, worldStem, Proxy.NO_PROXY, dataFixer, services, chunkProgressListenerFactory);
         this.root = root;
         this.settings = settings;
@@ -73,11 +73,11 @@ public class CoServerInstance extends MinecraftServer implements ServerInterface
 
                 String string;
                 try {
-                    while (!CoServerInstance.this.isStopped() && CoServerInstance.this.isRunning() && (string = bufferedReader.readLine()) != null) {
-                        CoServerInstance.this.handleConsoleInput(string, CoServerInstance.this.createCommandSourceStack());
+                    while (!CoMinecraftServer.this.isStopped() && CoMinecraftServer.this.isRunning() && (string = bufferedReader.readLine()) != null) {
+                        CoMinecraftServer.this.handleConsoleInput(string, CoMinecraftServer.this.createCommandSourceStack());
                     }
                 } catch (IOException var4) {
-                    CoServerInstance.LOGGER.error("Exception handling console input", var4);
+                    CoMinecraftServer.LOGGER.error("Exception handling console input", var4);
                 }
 
             }

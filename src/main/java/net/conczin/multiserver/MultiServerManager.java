@@ -9,7 +9,7 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpecBuilder;
-import net.conczin.multiserver.server.CoServerInstance;
+import net.conczin.multiserver.server.CoMinecraftServer;
 import net.conczin.multiserver.server.ServerSettings;
 import net.conczin.multiserver.utils.Exceptions;
 import net.minecraft.CrashReport;
@@ -58,7 +58,7 @@ import java.util.function.BooleanSupplier;
 
 public class MultiServerManager {
     public static final HashSet<Integer> PORTS = new HashSet<>();
-    public static final HashMap<String, CoServerInstance> SERVERS = new HashMap<>();
+    public static final HashMap<String, CoMinecraftServer> SERVERS = new HashMap<>();
     public static final HashMap<String, ServerSettings> SETTINGS = new HashMap<>();
     public static ServerSettings currentSettings;
 
@@ -76,7 +76,7 @@ public class MultiServerManager {
         if (PORTS.contains(port)) throw new Exceptions.PortInUseException();
 
         SETTINGS.put(root, settings);
-        CoServerInstance dedicatedServer = launchServer(args, root, port);
+        CoMinecraftServer dedicatedServer = launchServer(args, root, port);
 
         if (dedicatedServer != null) {
             SERVERS.put(root, dedicatedServer);
@@ -95,14 +95,14 @@ public class MultiServerManager {
     public static void shutdownServer(String root) throws Exceptions.ServerDoesNotExistException {
         if (!SERVERS.containsKey(root)) throw new Exceptions.ServerDoesNotExistException();
 
-        CoServerInstance server = SERVERS.get(root);
+        CoMinecraftServer server = SERVERS.get(root);
         server.halt(false);
 
         SERVERS.remove(root);
         PORTS.remove(server.getServerPort());
     }
 
-    public static CoServerInstance launchServer(String[] strings, String root, int port) {
+    public static CoMinecraftServer launchServer(String[] strings, String root, int port) {
         SharedConstants.tryDetectVersion();
 
         OptionParser optionParser = new OptionParser();
@@ -153,9 +153,9 @@ public class MultiServerManager {
             }
             WorldData worldData = worldStem.worldData();
             levelStorageAccess.saveDataTag(frozen, worldData);
-            final CoServerInstance dedicatedServer = MinecraftServer.spin(thread -> {
+            final CoMinecraftServer dedicatedServer = MinecraftServer.spin(thread -> {
                 currentSettings = SETTINGS.get(root);
-                CoServerInstance server = new CoServerInstance(thread, root, levelStorageAccess, packRepository, worldStem, dedicatedServerSettings, DataFixers.getDataFixer(), services, LoggerChunkProgressListener::new);
+                CoMinecraftServer server = new CoMinecraftServer(thread, root, levelStorageAccess, packRepository, worldStem, dedicatedServerSettings, DataFixers.getDataFixer(), services, LoggerChunkProgressListener::new);
                 server.setPort(port);
                 server.setDemo(optionSet.has(demo));
                 return server;

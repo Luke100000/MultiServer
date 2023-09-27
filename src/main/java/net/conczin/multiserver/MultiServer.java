@@ -1,7 +1,7 @@
 package net.conczin.multiserver;
 
 import com.mojang.logging.LogUtils;
-import net.conczin.multiserver.server.CoServerInstance;
+import net.conczin.multiserver.server.CoMinecraftServer;
 import net.conczin.multiserver.server.ServerSettings;
 import net.conczin.multiserver.utils.Exceptions;
 import net.fabricmc.api.DedicatedServerModInitializer;
@@ -31,7 +31,7 @@ public class MultiServer implements DedicatedServerModInitializer {
             while (true) {
                 float worstAverageTickTime = 0;
                 float averageTickTime = 0;
-                for (CoServerInstance server : MultiServerManager.SERVERS.values()) {
+                for (CoMinecraftServer server : MultiServerManager.SERVERS.values()) {
                     averageTickTime += server.getAverageTickTime();
                     worstAverageTickTime = Math.max(worstAverageTickTime, server.getAverageTickTime());
                 }

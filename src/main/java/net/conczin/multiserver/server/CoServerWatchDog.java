@@ -22,10 +22,10 @@ public class CoServerWatchDog implements Runnable {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final long MAX_SHUTDOWN_TIME = 10000L;
     private static final int SHUTDOWN_STATUS = 1;
-    private final CoServerInstance server;
+    private final CoMinecraftServer server;
     private final long maxTickTime;
 
-    public CoServerWatchDog(CoServerInstance dedicatedServer) {
+    public CoServerWatchDog(CoMinecraftServer dedicatedServer) {
         this.server = dedicatedServer;
         this.maxTickTime = dedicatedServer.getMaxTickLength();
     }
