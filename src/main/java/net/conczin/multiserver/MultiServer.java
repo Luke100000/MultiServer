@@ -15,7 +15,7 @@ public class MultiServer implements DedicatedServerModInitializer {
         ServerCommands.initialize();
 
         PrintThread thread = new PrintThread();
-        thread.start();
+        //thread.start();
 
         try {
             MultiServerManager.launchServer("server1", 25000, ServerSettings.create().setThreads(2).build());
