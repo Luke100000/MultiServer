@@ -5,7 +5,9 @@
   "name": "MultiServer",
   "description": "",
   "authors": [],
-  "contact": {"repo": "https://github.com/jonas/MultiServer"},
+  "contact": {
+    "repo": "https://github.com/jonas/MultiServer"
+  },
   "license": "MIT",
   "icon": "assets/multiserver/icon.png",
   "environment": "server",

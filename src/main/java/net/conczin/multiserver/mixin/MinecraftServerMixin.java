@@ -1,7 +1,6 @@
 package net.conczin.multiserver.mixin;
 
 import net.conczin.multiserver.MultiServer;
-import net.conczin.multiserver.MultiServerManager;
 import net.conczin.multiserver.server.CoMinecraftServer;
 import net.minecraft.Util;
 import net.minecraft.server.MinecraftServer;
@@ -20,7 +19,7 @@ public class MinecraftServerMixin {
     private ExecutorService redirectSomeMethod() {
         if (((MinecraftServer) (Object) this) instanceof CoMinecraftServer coServerInstance) {
             MultiServer.LOGGER.info("Redirecting executor of {} to a fixed thread pool with 2 threads", coServerInstance.getRoot());
-            return Executors.newFixedThreadPool(MultiServerManager.currentSettings.getThreads());
+            return Executors.newFixedThreadPool(MultiServer.serverManager.currentSettings.getThreads());
         } else {
             return Util.backgroundExecutor();
         }

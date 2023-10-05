@@ -13,6 +13,7 @@ import net.minecraft.server.dedicated.DedicatedServerSettings;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.progress.ChunkProgressListenerFactory;
+import net.minecraft.server.level.progress.LoggerChunkProgressListener;
 import net.minecraft.server.network.TextFilter;
 import net.minecraft.server.network.TextFilterClient;
 import net.minecraft.server.packs.repository.PackRepository;
@@ -21,12 +22,12 @@ import net.minecraft.server.players.OldUsersConverter;
 import net.minecraft.server.rcon.RconConsoleSource;
 import net.minecraft.server.rcon.thread.QueryThreadGs4;
 import net.minecraft.server.rcon.thread.RconThread;
-import net.minecraft.util.Mth;
 import net.minecraft.util.monitoring.jmx.MinecraftServerStatistics;
+import net.minecraft.util.profiling.jfr.JvmProfiler;
+import net.minecraft.util.profiling.jfr.callback.ProfiledDuration;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import org.jetbrains.annotations.Nullable;
@@ -44,12 +45,15 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class CoMinecraftServer extends MinecraftServer implements ServerInterface {
     static final Logger LOGGER = LogUtils.getLogger();
     private final List<ConsoleInput> consoleInput = Collections.synchronizedList(Lists.newArrayList());
     private final String root;
+    private final ServerSettings serverSettings;
+    private final Consumer<CoMinecraftServer> launchCallback;
     @Nullable
     private QueryThreadGs4 queryThreadGs4;
     private final RconConsoleSource rconConsoleSource;
@@ -59,9 +63,11 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
     @Nullable
     private final TextFilterClient textFilterClient;
 
-    public CoMinecraftServer(Thread thread, String root, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, DedicatedServerSettings settings, DataFixer dataFixer, Services services, ChunkProgressListenerFactory chunkProgressListenerFactory) {
+    public CoMinecraftServer(Thread thread, String root, ServerSettings serverSettings, Consumer<CoMinecraftServer> launchCallback, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, DedicatedServerSettings settings, DataFixer dataFixer, Services services, ChunkProgressListenerFactory chunkProgressListenerFactory) {
         super(thread, levelStorageAccess, packRepository, worldStem, Proxy.NO_PROXY, dataFixer, services, chunkProgressListenerFactory);
         this.root = root;
+        this.serverSettings = serverSettings;
+        this.launchCallback = launchCallback;
         this.settings = settings;
         this.rconConsoleSource = new RconConsoleSource(this);
         this.textFilterClient = TextFilterClient.createFromConfig(settings.getProperties().textFilteringConfig);
@@ -78,32 +84,26 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
         return server;
     }
 
+    @Override
+    protected void loadLevel() {
+        ProfiledDuration profiledDuration = JvmProfiler.INSTANCE.onWorldLoadedStarted();
+        this.worldData.setModdedInfo(this.getServerModName(), this.getModdedStatus().shouldReportAsModified());
+        this.createLevels(new LoggerChunkProgressListener(1));
+        this.forceDifficulty();
+        if (profiledDuration != null) {
+            profiledDuration.finish();
+        }
+    }
+
+    @Override
     public boolean initServer() throws IOException {
-        Thread thread = new Thread("Server console handler") {
-            @Override
-            public void run() {
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
-
-                String string;
-                try {
-                    while (!CoMinecraftServer.this.isStopped() && CoMinecraftServer.this.isRunning() && (string = bufferedReader.readLine()) != null) {
-                        CoMinecraftServer.this.handleConsoleInput(string, CoMinecraftServer.this.createCommandSourceStack());
-                    }
-                } catch (IOException var4) {
-                    CoMinecraftServer.LOGGER.error("Exception handling console input", var4);
-                }
-
-            }
-        };
-        thread.setDaemon(true);
-        thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER));
-        thread.start();
-        LOGGER.info("Starting minecraft server version {}", SharedConstants.getCurrentVersion().getName());
-        if (Runtime.getRuntime().maxMemory() / 1024L / 1024L < 512L) {
-            LOGGER.warn("To start the server with more ram, launch it as \"java -Xmx1024M -Xms1024M -jar minecraft_server.jar\"");
+        // Launch console for admin input
+        if (serverSettings.hasConsole()) {
+            launchConsole();
         }
 
-        LOGGER.info("Loading properties");
+        LOGGER.info("Starting minecraft server version {}", SharedConstants.getCurrentVersion().getName());
+
         DedicatedServerProperties properties = this.settings.getProperties();
         if (this.isSingleplayer()) {
             this.setLocalIp("127.0.0.1");
@@ -119,7 +119,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
         super.setPlayerIdleTimeout(properties.playerIdleTimeout.get());
         this.setEnforceWhitelist(properties.enforceWhitelist);
         this.worldData.setGameType(properties.gamemode);
-        LOGGER.info("Default game type: {}", properties.gamemode);
+
         InetAddress inetAddress = null;
         if (!this.getLocalIp().isEmpty()) {
             inetAddress = InetAddress.getByName(this.getLocalIp());
@@ -133,6 +133,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
         LOGGER.info("Starting Minecraft server on {}:{}", this.getLocalIp().isEmpty() ? "*" : this.getLocalIp(), this.getPort());
 
         try {
+            //noinspection ConstantConditions
             this.getConnection().startTcpServerListener(inetAddress, this.getPort());
         } catch (IOException var10) {
             LOGGER.warn("**** FAILED TO BIND TO PORT!");
@@ -141,25 +142,25 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
             return false;
         }
 
-        if (!this.usesAuthentication()) {
-            LOGGER.warn("**** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!");
-            LOGGER.warn("The server will make no attempt to authenticate usernames. Beware.");
-            LOGGER.warn("While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.");
-            LOGGER.warn("To change this, set \"online-mode\" to \"true\" in the server.properties file.");
-        }
-
         if (!OldUsersConverter.serverReadyAfterUserconversion(this)) {
             return false;
         } else {
             this.setPlayerList(new CoServerPlayerList(this, this.registries(), this.playerDataStorage));
-            long l = Util.getNanos();
+
+            long time = Util.getNanos();
+
             SkullBlockEntity.setup(this.services, this);
             GameProfileCache.setUsesAuthentication(this.usesAuthentication());
+
             LOGGER.info("Preparing level \"{}\"", this.getLevelIdName());
             this.loadLevel();
-            long m = Util.getNanos() - l;
+
+            long m = Util.getNanos() - time;
             String string = String.format(Locale.ROOT, "%.3fs", (double) m / 1.0E9);
             LOGGER.info("Done ({})! For help, type \"help\"", string);
+
+            launchCallback.accept(this);
+
             if (properties.announcePlayerAchievements != null) {
                 this.getGameRules().getRule(GameRules.RULE_ANNOUNCE_ADVANCEMENTS).set(properties.announcePlayerAchievements, this);
             }
@@ -189,6 +190,28 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
 
             return true;
         }
+    }
+
+    private void launchConsole() {
+        Thread thread = new Thread("Server console handler") {
+            @Override
+            public void run() {
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+
+                String string;
+                try {
+                    while (!CoMinecraftServer.this.isStopped() && CoMinecraftServer.this.isRunning() && (string = bufferedReader.readLine()) != null) {
+                        CoMinecraftServer.this.handleConsoleInput(string, CoMinecraftServer.this.createCommandSourceStack());
+                    }
+                } catch (IOException var4) {
+                    CoMinecraftServer.LOGGER.error("Exception handling console input", var4);
+                }
+
+            }
+        };
+        thread.setDaemon(true);
+        thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER));
+        thread.start();
     }
 
     @Override
@@ -222,7 +245,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
 
     public SystemReport fillServerSystemReport(SystemReport systemReport) {
         systemReport.setDetail("Is Modded", () -> this.getModdedStatus().fullDescription());
-        systemReport.setDetail("Type", () -> "Dedicated Server (map_server.txt)");
+        systemReport.setDetail("Type", () -> "CoServer");
         return systemReport;
     }
 
@@ -239,7 +262,6 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
         if (this.queryThreadGs4 != null) {
             this.queryThreadGs4.stop();
         }
-
     }
 
     @Override
@@ -305,21 +327,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
 
     @Override
     public boolean isUnderSpawnProtection(ServerLevel serverLevel, BlockPos blockPos, Player player) {
-        if (serverLevel.dimension() != Level.OVERWORLD) {
-            return false;
-        } else if (this.getPlayerList().getOps().isEmpty()) {
-            return false;
-        } else if (this.getPlayerList().isOp(player.getGameProfile())) {
-            return false;
-        } else if (this.getSpawnProtectionRadius() <= 0) {
-            return false;
-        } else {
-            BlockPos blockPos2 = serverLevel.getSharedSpawnPos();
-            int i = Mth.abs(blockPos.getX() - blockPos2.getX());
-            int j = Mth.abs(blockPos.getZ() - blockPos2.getZ());
-            int k = Math.max(i, j);
-            return k <= this.getSpawnProtectionRadius();
-        }
+        return false;
     }
 
     @Override

@@ -9,6 +9,7 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpecBuilder;
+import net.conczin.multiserver.data.PlayerData;
 import net.conczin.multiserver.server.CoMinecraftServer;
 import net.conczin.multiserver.server.ServerSettings;
 import net.conczin.multiserver.utils.Exceptions;
@@ -52,38 +53,78 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 public class MultiServerManager {
-    public static final HashSet<Integer> PORTS = new HashSet<>();
-    public static final HashMap<String, CoMinecraftServer> SERVERS = new HashMap<>();
-    public static final HashMap<String, ServerSettings> SETTINGS = new HashMap<>();
-    public static ServerSettings currentSettings;
+    public final HashSet<Integer> FREE_PORTS = new HashSet<>();
+    public final HashMap<String, CoMinecraftServer> SERVERS = new HashMap<>();
+    public final HashMap<String, ServerSettings> SETTINGS = new HashMap<>();
+    public ServerSettings currentSettings;
+
+    public HealthMonitor healthMonitor = new HealthMonitor();
 
     public static String[] args;
+
+    public MultiServerManager() {
+        for (int port = Config.getInstance().firstPort; port <= Config.getInstance().lastPort; port++) {
+            FREE_PORTS.add(port);
+        }
+    }
+
+    /**
+     * Launches a server for the given player
+     *
+     * @param player the player to launch the server for
+     */
+    public void launchServer(PlayerData player, Consumer<CoMinecraftServer> callback) {
+        if (SERVERS.containsKey(player.getRoot())) {
+            callback.accept(SERVERS.get(player.getRoot()));
+            return;
+        }
+
+        synchronized (FREE_PORTS) {
+            // Reserve a port
+            int port;
+            try {
+                port = FREE_PORTS.iterator().next();
+            } catch (NoSuchElementException e) {
+                // nop
+                return;
+            }
+
+            try {
+                if (launchServer(player.getRoot(), port, player.getSettings(), callback)) {
+                    FREE_PORTS.remove(port);
+                }
+            } catch (Exceptions.ServerAlreadyRunningException | Exceptions.PortInUseException e) {
+                // nop
+            }
+        }
+    }
 
     /**
      * @param root     the root directory of the server to launch
      * @param port     the port to bind the server to
      * @param settings the settings to launch the server with
+     * @return true if the server was launched successfully
      * @throws Exceptions.ServerAlreadyRunningException a server with the given root is already running
      * @throws Exceptions.PortInUseException            the given port is already in use
      */
-    public static void launchServer(String root, int port, ServerSettings settings) throws Exceptions.ServerAlreadyRunningException, Exceptions.PortInUseException {
+    public boolean launchServer(String root, int port, ServerSettings settings, Consumer<CoMinecraftServer> callback) throws Exceptions.ServerAlreadyRunningException, Exceptions.PortInUseException {
         if (SERVERS.containsKey(root)) throw new Exceptions.ServerAlreadyRunningException();
-        if (PORTS.contains(port)) throw new Exceptions.PortInUseException();
 
         SETTINGS.put(root, settings);
-        CoMinecraftServer dedicatedServer = launchServer(args, root, port);
+        CoMinecraftServer dedicatedServer = launchServer(args, root, port, settings, callback);
 
         if (dedicatedServer != null) {
             SERVERS.put(root, dedicatedServer);
-            PORTS.add(port);
-        } else {
-            SETTINGS.remove(root, settings);
+            return true;
         }
+        return false;
     }
 
     /**
@@ -92,17 +133,17 @@ public class MultiServerManager {
      * @param root the root directory of the server to shut down
      * @throws Exceptions.ServerDoesNotExistException a server with the given root does not exist
      */
-    public static void shutdownServer(String root) throws Exceptions.ServerDoesNotExistException {
+    public void shutdownServer(String root) throws Exceptions.ServerDoesNotExistException {
         if (!SERVERS.containsKey(root)) throw new Exceptions.ServerDoesNotExistException();
 
         CoMinecraftServer server = SERVERS.get(root);
         server.halt(false);
 
         SERVERS.remove(root);
-        PORTS.remove(server.getServerPort());
+        FREE_PORTS.add(server.getServerPort());
     }
 
-    public static CoMinecraftServer launchServer(String[] strings, String root, int port) {
+    public CoMinecraftServer launchServer(String[] strings, String root, int port, ServerSettings settings, Consumer<CoMinecraftServer> callback) {
         SharedConstants.tryDetectVersion();
 
         OptionParser optionParser = new OptionParser();
@@ -153,9 +194,9 @@ public class MultiServerManager {
             }
             WorldData worldData = worldStem.worldData();
             levelStorageAccess.saveDataTag(frozen, worldData);
+            currentSettings = SETTINGS.get(root);
             final CoMinecraftServer dedicatedServer = CoMinecraftServer.spinCoServer(thread -> {
-                currentSettings = SETTINGS.get(root);
-                CoMinecraftServer server = new CoMinecraftServer(thread, root, levelStorageAccess, packRepository, worldStem, dedicatedServerSettings, DataFixers.getDataFixer(), services, LoggerChunkProgressListener::new);
+                CoMinecraftServer server = new CoMinecraftServer(thread, root, settings, callback, levelStorageAccess, packRepository, worldStem, dedicatedServerSettings, DataFixers.getDataFixer(), services, LoggerChunkProgressListener::new);
                 server.setPort(port);
                 server.setDemo(optionSet.has(demo));
                 return server;
@@ -167,7 +208,7 @@ public class MultiServerManager {
                 }
             };
             thread2.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(MultiServer.LOGGER));
-            Runtime.getRuntime().addShutdownHook(thread2);
+            Runtime.getRuntime().addShutdownHook(thread2); // todo make one single thread to shut down all servers
             return dedicatedServer;
         } catch (Exception exception2) {
             MultiServer.LOGGER.error(LogUtils.FATAL_MARKER, "Failed to start the minecraft server", exception2);
