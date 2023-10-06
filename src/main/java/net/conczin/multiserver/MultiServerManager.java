@@ -66,7 +66,7 @@ public class MultiServerManager {
     public final HashMap<String, ServerSettings> SETTINGS = new HashMap<>();
     public ServerSettings currentSettings;
 
-    public HealthMonitor healthMonitor = new HealthMonitor();
+    public HealthMonitor healthMonitor = new HealthMonitor(this);
 
     public static String[] args;
     private DedicatedServer lobbyServer;

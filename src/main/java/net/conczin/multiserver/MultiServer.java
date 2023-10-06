@@ -13,5 +13,15 @@ public class MultiServer implements DedicatedServerModInitializer {
     @Override
     public void onInitializeServer() {
         ServerCommands.initialize();
+
+        // Launch prometheus metrics endpoint
+        int port = Config.getInstance().metricsPort;
+        if (port > 0) {
+            try {
+                MetricsEndpoint.launch(port);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
