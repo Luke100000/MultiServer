@@ -26,6 +26,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.*;
+import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.dedicated.DedicatedServerProperties;
 import net.minecraft.server.dedicated.DedicatedServerSettings;
 import net.minecraft.server.level.progress.LoggerChunkProgressListener;
@@ -68,6 +69,7 @@ public class MultiServerManager {
     public HealthMonitor healthMonitor = new HealthMonitor();
 
     public static String[] args;
+    private DedicatedServer lobbyServer;
 
     public MultiServerManager() {
         for (int port = Config.getInstance().firstPort; port <= Config.getInstance().lastPort; port++) {
@@ -287,5 +289,13 @@ public class MultiServerManager {
                 //nop
             }
         }
+    }
+
+    public void setMainServer(DedicatedServer server) {
+        this.lobbyServer = server;
+    }
+
+    public DedicatedServer getLobbyServer() {
+        return lobbyServer;
     }
 }

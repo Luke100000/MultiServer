@@ -5,7 +5,7 @@ starting and stopping servers.
 
 ## Setup
 
-Create a mods dir and provide MultiServer, the fabric API, LuckyPerms and FabricProxy-Lite.
+Create a mods dir and provide MultiServer, the fabric API, and FabricProxy-Lite.
 
 Optionally install mods from the compatible performance mods section.
 

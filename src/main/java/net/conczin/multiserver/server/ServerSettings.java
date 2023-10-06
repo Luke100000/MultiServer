@@ -1,8 +1,12 @@
 package net.conczin.multiserver.server;
 
 import net.minecraft.nbt.CompoundTag;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
 
 public class ServerSettings {
+    private @Nullable UUID owner;
     private int threads = 2;
     private boolean hasConsole = false;
 
@@ -27,6 +31,14 @@ public class ServerSettings {
 
     public int getThreads() {
         return threads;
+    }
+
+    public @Nullable UUID getOwner() {
+        return owner;
+    }
+
+    public void setOwner(@Nullable UUID owner) {
+        this.owner = owner;
     }
 
     public CompoundTag save() {

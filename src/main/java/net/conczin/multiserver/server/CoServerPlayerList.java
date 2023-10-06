@@ -2,14 +2,19 @@ package net.conczin.multiserver.server;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.logging.LogUtils;
+import net.conczin.multiserver.data.PlayerData;
+import net.conczin.multiserver.data.PlayerDataManager;
 import net.minecraft.core.LayeredRegistryAccess;
+import net.minecraft.network.Connection;
 import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.dedicated.DedicatedServerProperties;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.level.storage.PlayerDataStorage;
 import org.slf4j.Logger;
 
 import java.io.IOException;
+import java.util.UUID;
 
 public class CoServerPlayerList extends PlayerList {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -29,6 +34,18 @@ public class CoServerPlayerList extends PlayerList {
         this.saveOps();
         if (!this.getWhiteList().getFile().exists()) {
             this.saveWhiteList();
+        }
+    }
+
+    @Override
+    public void placeNewPlayer(Connection connection, ServerPlayer serverPlayer) {
+        super.placeNewPlayer(connection, serverPlayer);
+
+        // A new user joined, verify all permissions
+        UUID owner = getServer().getServerSettings().getOwner();
+        if (owner != null) {
+            PlayerData playerData = PlayerDataManager.getPlayerData(owner);
+            playerData.initPermissions();
         }
     }
 

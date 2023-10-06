@@ -1,26 +1,30 @@
 package net.conczin.multiserver.data;
 
 import net.conczin.multiserver.MultiServer;
+import net.conczin.multiserver.server.CoMinecraftServer;
 import net.conczin.multiserver.server.ServerSettings;
 import net.conczin.multiserver.utils.Utils;
-import net.luckperms.api.LuckPermsProvider;
-import net.luckperms.api.context.DefaultContextKeys;
-import net.luckperms.api.node.Node;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.GameProfileCache;
+import net.minecraft.world.level.GameType;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class PlayerData extends TidySavedData {
     private final UUID uuid;
     private final Map<UUID, PermissionGroup> permissions = new HashMap<>();
-    private final PermissionGroup defaultPermissionGroup;
+    private PermissionGroup defaultPermissionGroup;
     private final ServerSettings settings;
 
-    public PlayerData(ServerLevel level, UUID uuid) {
+    public PlayerData(UUID uuid) {
         super();
+
         this.uuid = uuid;
         this.defaultPermissionGroup = PermissionGroup.NONE;
         this.settings = new ServerSettings();
@@ -28,8 +32,9 @@ public class PlayerData extends TidySavedData {
         initPermissions();
     }
 
-    public PlayerData(CompoundTag tag, ServerLevel level, UUID uuid) {
+    public PlayerData(CompoundTag tag, UUID uuid) {
         super();
+
         this.uuid = uuid;
 
         tag.getCompound("permissions").getAllKeys().forEach(id -> {
@@ -42,19 +47,58 @@ public class PlayerData extends TidySavedData {
         initPermissions();
     }
 
-    public void addPermission(UUID userUuid, String permission, String world) {
-        LuckPermsProvider.get().getUserManager().modifyUser(userUuid, user -> {
-            user.data().add(Node.builder(permission).withContext(DefaultContextKeys.WORLD_KEY, world).build());
-        });
+    public void updatePermissionsForPlayer(CoMinecraftServer server, UUID uuid) {
+        PermissionGroup permissionGroup = getPermissions(uuid);
+        GameProfileCache profileCache = server.getProfileCache();
+
+        if (profileCache != null) {
+            // Owner and Moderators will be op
+            profileCache.get(uuid).ifPresent(profile -> {
+                if (permissionGroup == PermissionGroup.OWNER || permissionGroup == PermissionGroup.MODERATOR) {
+                    server.getPlayerList().op(profile);
+                } else {
+                    server.getPlayerList().deop(profile);
+                }
+            });
+
+            // Guests will be in adventure mode
+            if (permissionGroup == PermissionGroup.GUEST) {
+                getPlayer(server, uuid).ifPresent(player -> {
+                    player.setGameMode(GameType.ADVENTURE);
+                });
+            }
+
+            // Non-member will get kicked, they should not be here in the first place
+            if (permissionGroup == PermissionGroup.NONE) {
+                getPlayer(server, uuid).ifPresent(player -> {
+                    player.connection.disconnect(Component.literal("You are not a member of this server!"));
+                });
+            }
+        }
     }
 
-    private void initPermissions() {
+    private static Optional<ServerPlayer> getPlayer(CoMinecraftServer server, UUID uuid) {
+        for (ServerLevel l : server.getAllLevels()) {
+            if (l.getPlayerByUUID(uuid) instanceof ServerPlayer player) {
+                return Optional.of(player);
+            }
+        }
+        return Optional.empty();
+    }
+
+    public void initPermissions() {
+        CoMinecraftServer server = MultiServer.serverManager.SERVERS.get(getRoot());
+        if (server != null) {
+            initPermissions(server);
+        }
+    }
+
+    private void initPermissions(CoMinecraftServer server) {
+        // The instance creator is always the owner
         permissions.put(uuid, PermissionGroup.OWNER);
 
-        permissions.forEach((uuid, permissionGroup) -> {
-            addPermission(uuid, "minecraft.command.gamemode", getRoot());
-            MultiServer.LOGGER.error(LuckPermsProvider.get().getUserManager().getUser(uuid).getNodes().size() + " nodes");
-        });
+        // Manage permissions
+        permissions.keySet().forEach(uuid -> updatePermissionsForPlayer(server, uuid));
     }
 
     @Override
@@ -66,10 +110,6 @@ public class PlayerData extends TidySavedData {
         tag.putString("defaultPermissionGroup", defaultPermissionGroup.name());
         tag.put("settings", settings.save());
         return tag;
-    }
-
-    public Map<UUID, PermissionGroup> getPermissions() {
-        return permissions;
     }
 
     public ServerSettings getSettings() {
@@ -86,6 +126,15 @@ public class PlayerData extends TidySavedData {
 
     public PermissionGroup getPermissions(UUID playerUUID) {
         return permissions.getOrDefault(playerUUID, defaultPermissionGroup);
+    }
+
+    public PermissionGroup getDefaultPermissionGroup() {
+        return defaultPermissionGroup;
+    }
+
+    public void setDefaultPermissionGroup(PermissionGroup defaultPermissionGroup) {
+        this.defaultPermissionGroup = defaultPermissionGroup;
+        initPermissions();
     }
 
     public void setPermission(UUID uuid, PermissionGroup permission) {

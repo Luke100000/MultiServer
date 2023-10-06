@@ -105,7 +105,7 @@ public class ServerCommands {
         UUID playerUUID = player.getUUID();
 
         // Update permission
-        PlayerData playerData = PlayerDataManager.getPlayerData(context.getSource().getLevel(), playerUUID);
+        PlayerData playerData = PlayerDataManager.getPlayerData(playerUUID);
         getUUID(context.getSource().getLevel(), StringArgumentType.getString(context, "user")).ifPresentOrElse(uuid -> {
             if (permission == null) {
                 playerData.removePermission(uuid);
@@ -132,7 +132,7 @@ public class ServerCommands {
         ServerPlayer player = context.getSource().getPlayerOrException();
         UUID playerUUID = player.getUUID();
 
-        PlayerData hostPlayerData = PlayerDataManager.getPlayerData(context.getSource().getLevel(), playerUUID);
+        PlayerData hostPlayerData = PlayerDataManager.getPlayerData(playerUUID);
 
         joinPlayer(context, hostPlayerData);
 
@@ -143,7 +143,7 @@ public class ServerCommands {
         ServerPlayer player = context.getSource().getPlayerOrException();
         UUID playerUUID = player.getUUID();
         getUUID(context.getSource().getLevel(), StringArgumentType.getString(context, "user")).ifPresentOrElse(uuid -> {
-            PlayerData hostPlayerData = PlayerDataManager.getPlayerData(context.getSource().getLevel(), uuid);
+            PlayerData hostPlayerData = PlayerDataManager.getPlayerData(uuid);
 
             // Check access permission
             PermissionGroup permissions = hostPlayerData.getPermissions(playerUUID);

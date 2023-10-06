@@ -443,4 +443,8 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
     public String getRoot() {
         return root;
     }
+
+    public ServerSettings getServerSettings() {
+        return serverSettings;
+    }
 }
