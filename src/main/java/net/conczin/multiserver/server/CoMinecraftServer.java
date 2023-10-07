@@ -4,7 +4,8 @@ import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.DataFixer;
 import com.mojang.logging.LogUtils;
-import net.conczin.multiserver.dynamic.DynamicManager;
+import net.conczin.multiserver.server.dynamic.DynamicManager;
+import net.conczin.multiserver.server.dynamic.SleepManager;
 import net.minecraft.*;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -65,6 +66,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
     private final TextFilterClient textFilterClient;
 
     public DynamicManager dynamicManager;
+    public SleepManager sleepManager = new SleepManager(this);
 
     public CoMinecraftServer(Thread thread, String root, ServerSettings serverSettings, Consumer<CoMinecraftServer> launchCallback, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository, WorldStem worldStem, DedicatedServerSettings settings, DataFixer dataFixer, Services services, ChunkProgressListenerFactory chunkProgressListenerFactory) {
         super(thread, levelStorageAccess, packRepository, worldStem, Proxy.NO_PROXY, dataFixer, services, chunkProgressListenerFactory);
@@ -277,6 +279,8 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
         if (this.dynamicManager != null) {
             this.dynamicManager.tick();
         }
+
+        this.sleepManager.tick();
     }
 
     @Override

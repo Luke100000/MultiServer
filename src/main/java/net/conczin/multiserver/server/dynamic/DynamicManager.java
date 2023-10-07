@@ -1,4 +1,4 @@
-package net.conczin.multiserver.dynamic;
+package net.conczin.multiserver.server.dynamic;
 
 import net.conczin.multiserver.MultiServer;
 import net.conczin.multiserver.server.CoMinecraftServer;
@@ -28,7 +28,6 @@ public class DynamicManager {
     public void tick() {
         tick++;
         if (tick % TICKS_PER_UPDATE == 0 && server.getPlayerList().getPlayerCount() > 0) {
-            System.out.printf("mspt: %f%n", server.getAverageTickTime());
             float mspt = server.getAverageTickTime();
             float target = server.getServerSettings().getMspt();
             if (mspt > target + 5.0f && quality > 0.0f) {
