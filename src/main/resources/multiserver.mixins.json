@@ -3,9 +3,7 @@
   "minVersion": "0.8",
   "package": "net.conczin.multiserver.mixin",
   "compatibilityLevel": "JAVA_17",
-  "mixins": [
-    "MainMixin", "MinecraftServerMixin"
-  ],
+  "mixins": ["ChunkMapMixin", "MainMixin", "MinecraftServerMixin"],
   "client": [
   ],
   "injectors": {
