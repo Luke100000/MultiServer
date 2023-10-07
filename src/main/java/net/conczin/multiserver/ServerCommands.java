@@ -1,6 +1,7 @@
 package net.conczin.multiserver;
 
 import com.mojang.authlib.GameProfile;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -23,19 +24,28 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.GameProfileCache;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
 public class ServerCommands {
+    private static final String HELP = """
+            §lMultiServer commands:§r
+            /ms join [user] §o– Join your own or another user's server.§r
+            /ms leave §o– Return to the lobby.§r
+            /ms invite <user> §o– Add someone as member.§r
+            /ms invite <user> [permissions] §o– Grant specific permission.§r
+            /ms kick <user> §o– Kick someone from your server.§r
+            /ms guests <true/false> §o– Allow guests to visit your server.§r
+            /ms members §o– See who currently has access to your server.§r""";
+
     public static void initialize() {
         register(Commands.literal("ms")
-                .executes(context -> {
-                    context.getSource().sendSuccess(() -> Component.literal("MultiServer commands:"), false);
-                    context.getSource().sendSuccess(() -> Component.literal("/ms start <root> <port>"), false);
-                    context.getSource().sendSuccess(() -> Component.literal("/ms stop <root>"), false);
-                    return 1;
-                })
+                .executes(ServerCommands::help)
+                .then(Commands.literal("help")
+                        .executes(ServerCommands::help))
+
                 .then(Commands.literal("start")
                         .requires(commandSourceStack -> commandSourceStack.hasPermission(2))
                         .then(Commands.argument("root", StringArgumentType.word())
@@ -63,7 +73,48 @@ public class ServerCommands {
                         .then(Commands.argument("user", StringArgumentType.word())
                                 .executes(ServerCommands::inviteUserAsMember)
                                 .then(Commands.argument("permission", StringArgumentType.word())
-                                        .executes(ServerCommands::inviteUser)))));
+                                        .executes(ServerCommands::inviteUser))))
+
+                .then(Commands.literal("guests")
+                        .then(Commands.argument("allow", BoolArgumentType.bool())
+                                .executes(ServerCommands::allowGuests)))
+
+                .then(Commands.literal("members")
+                        .executes(ServerCommands::printMembers)));
+    }
+
+    private static int help(CommandContext<CommandSourceStack> context) {
+        context.getSource().sendSuccess(() -> Component.literal(HELP), false);
+        return 0;
+    }
+
+    private static PlayerData getPlayerData(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        UUID playerUUID = player.getUUID();
+        return PlayerDataManager.getPlayerData(playerUUID);
+    }
+
+    private static int printMembers(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        GameProfileCache profileCache = context.getSource().getServer().getProfileCache();
+        if (profileCache != null) {
+            PlayerData playerData = getPlayerData(context);
+            for (PermissionGroup value : PermissionGroup.values()) {
+                List<String> strings = playerData.getPermissions().entrySet().stream().filter(entry -> entry.getValue() == value).map(entry -> {
+                    return profileCache.get(entry.getKey()).map(GameProfile::getName).orElse(entry.getKey().toString());
+                }).toList();
+                if (!strings.isEmpty()) {
+                    context.getSource().sendSuccess(() -> Component.literal(value.name() + ": " + String.join(", ", strings)), false);
+                }
+            }
+        }
+        return 0;
+    }
+
+    private static int allowGuests(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        boolean allow = BoolArgumentType.getBool(context, "allow");
+        getPlayerData(context).setDefaultPermissionGroup(allow ? PermissionGroup.GUEST : PermissionGroup.NONE);
+        context.getSource().sendSuccess(() -> Component.literal("Guests " + (allow ? "allowed" : "disallowed") + "."), false);
+        return 0;
     }
 
     private static int leaveServer(CommandContext<CommandSourceStack> context) {
@@ -101,11 +152,8 @@ public class ServerCommands {
     }
 
     private static int inviteUserAs(CommandContext<CommandSourceStack> context, @Nullable PermissionGroup permission) throws CommandSyntaxException {
-        ServerPlayer player = context.getSource().getPlayerOrException();
-        UUID playerUUID = player.getUUID();
-
         // Update permission
-        PlayerData playerData = PlayerDataManager.getPlayerData(playerUUID);
+        PlayerData playerData = getPlayerData(context);
         getUUID(context.getSource().getLevel(), StringArgumentType.getString(context, "user")).ifPresentOrElse(uuid -> {
             if (permission == null) {
                 playerData.removePermission(uuid);

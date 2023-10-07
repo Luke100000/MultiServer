@@ -37,8 +37,9 @@ public class PlayerData extends TidySavedData {
 
         this.uuid = uuid;
 
-        tag.getCompound("permissions").getAllKeys().forEach(id -> {
-            permissions.put(UUID.fromString(id), PermissionGroup.valueOf(tag.getString(id)));
+        CompoundTag permissionTag = tag.getCompound("permissions");
+        permissionTag.getAllKeys().forEach(id -> {
+            permissions.put(UUID.fromString(id), PermissionGroup.valueOf(permissionTag.getString(id)));
         });
 
         this.defaultPermissionGroup = PermissionGroup.valueOf(tag.getString("defaultPermissionGroup"));
@@ -87,6 +88,9 @@ public class PlayerData extends TidySavedData {
     }
 
     public void initPermissions() {
+        // The instance creator is always the owner
+        permissions.put(uuid, PermissionGroup.OWNER);
+
         CoMinecraftServer server = MultiServer.serverManager.SERVERS.get(getRoot());
         if (server != null) {
             initPermissions(server);
@@ -94,9 +98,6 @@ public class PlayerData extends TidySavedData {
     }
 
     private void initPermissions(CoMinecraftServer server) {
-        // The instance creator is always the owner
-        permissions.put(uuid, PermissionGroup.OWNER);
-
         // Manage permissions
         permissions.keySet().forEach(uuid -> updatePermissionsForPlayer(server, uuid));
     }
@@ -147,5 +148,9 @@ public class PlayerData extends TidySavedData {
         permissions.remove(uuid);
         initPermissions();
         setDirty();
+    }
+
+    public Map<UUID, PermissionGroup> getPermissions() {
+        return permissions;
     }
 }
