@@ -13,6 +13,7 @@ import net.conczin.multiserver.data.PlayerData;
 import net.conczin.multiserver.server.CoMinecraftServer;
 import net.conczin.multiserver.server.ServerSettings;
 import net.conczin.multiserver.utils.Exceptions;
+import net.conczin.multiserver.utils.Utils;
 import net.minecraft.CrashReport;
 import net.minecraft.DefaultUncaughtExceptionHandler;
 import net.minecraft.SharedConstants;
@@ -49,6 +50,7 @@ import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.storage.WorldData;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.Proxy;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -145,8 +147,24 @@ public class MultiServerManager {
         FREE_PORTS.add(server.getServerPort());
     }
 
+    private void cloneTemplateIfNeeded(String root) {
+        Path targetPath = Paths.get(root + "/world");
+        if (!targetPath.toFile().isDirectory()) {
+            //noinspection ResultOfMethodCallIgnored
+            targetPath.toFile().mkdirs();
+            Path templatePath = Paths.get(Config.getInstance().templateWorld + "/world");
+            try {
+                Utils.copyFolder(templatePath, targetPath);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     public CoMinecraftServer launchServer(String[] strings, String root, int port, ServerSettings settings, Consumer<CoMinecraftServer> callback) {
         SharedConstants.tryDetectVersion();
+
+        cloneTemplateIfNeeded(root);
 
         OptionParser optionParser = new OptionParser();
         OptionSpecBuilder demo = optionParser.accepts("demo");
@@ -164,8 +182,8 @@ public class MultiServerManager {
             Bootstrap.bootStrap();
             Bootstrap.validate();
             Util.startTimerHackThread();
-            Path path2 = Paths.get("server.properties");
-            DedicatedServerSettings dedicatedServerSettings = new DedicatedServerSettings(path2);
+            Path serverSettingPath = Paths.get("server.properties");
+            DedicatedServerSettings dedicatedServerSettings = new DedicatedServerSettings(serverSettingPath);
             dedicatedServerSettings.forceSave();
             File file = new File(root);
             Services services = Services.create(new YggdrasilAuthenticationService(Proxy.NO_PROXY), file);

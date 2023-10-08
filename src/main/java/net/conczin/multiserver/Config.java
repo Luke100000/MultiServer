@@ -7,6 +7,8 @@ public final class Config extends JsonConfig {
         return INSTANCE;
     }
 
+    public String templateWorld = "template";
+
     public int metricsPort = 8000;
     public int firstPort = 25001;
     public int lastPort = 25032;

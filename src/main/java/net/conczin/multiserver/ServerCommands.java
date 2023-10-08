@@ -232,7 +232,7 @@ public class ServerCommands {
         String root = context.getArgument("root", String.class);
         Integer port = context.getArgument("port", Integer.class);
 
-        if (!MultiServer.serverManager.SERVERS.containsKey(root)) {
+        if (MultiServer.serverManager.SERVERS.containsKey(root)) {
             context.getSource().sendFailure(Component.literal("Server already running."));
             return 1;
         } else {
