@@ -2,13 +2,17 @@ package net.conczin.multiserver.mixin;
 
 import net.conczin.multiserver.MultiServer;
 import net.conczin.multiserver.server.CoMinecraftServer;
+import net.conczin.multiserver.utils.Exceptions;
 import net.minecraft.Util;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.dedicated.DedicatedServer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,6 +31,21 @@ public class MinecraftServerMixin {
                 MultiServer.serverManager.setMainServer(dedicatedServer);
             }
             return Util.backgroundExecutor();
+        }
+    }
+
+    @Inject(method = "halt(Z)V", at = @At("HEAD"))
+    private void multiServer$injectHalt(boolean bl, CallbackInfo ci) {
+        //noinspection ConstantConditions
+        if (((MinecraftServer) (Object) this) instanceof DedicatedServer) {
+            List<String> servers = MultiServer.serverManager.SERVERS.values().stream().map(CoMinecraftServer::getRoot).toList();
+            servers.forEach(root -> {
+                try {
+                    MultiServer.serverManager.shutdownServer(root);
+                } catch (Exceptions.ServerDoesNotExistException e) {
+                    e.printStackTrace();
+                }
+            });
         }
     }
 }
