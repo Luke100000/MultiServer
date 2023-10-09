@@ -10,26 +10,27 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpecBuilder;
 import net.conczin.multiserver.data.PlayerData;
+import net.conczin.multiserver.data.PlayerDataManager;
 import net.conczin.multiserver.server.CoMinecraftServer;
 import net.conczin.multiserver.server.ServerSettings;
 import net.conczin.multiserver.utils.Exceptions;
 import net.conczin.multiserver.utils.Utils;
-import net.minecraft.CrashReport;
-import net.minecraft.DefaultUncaughtExceptionHandler;
-import net.minecraft.SharedConstants;
-import net.minecraft.Util;
+import net.minecraft.*;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.*;
 import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.dedicated.DedicatedServerProperties;
 import net.minecraft.server.dedicated.DedicatedServerSettings;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.progress.LoggerChunkProgressListener;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
@@ -48,6 +49,7 @@ import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.LevelSummary;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.storage.WorldData;
+import net.minecraft.world.scores.PlayerTeam;
 
 import java.io.File;
 import java.io.IOException;
@@ -315,5 +317,46 @@ public class MultiServerManager {
 
     public DedicatedServer getLobbyServer() {
         return lobbyServer;
+    }
+
+    public void onPlayerJoin(ServerPlayer player) {
+        // Help message
+        MutableComponent text = Component.literal("Welcome to MultiServer! Run ")
+                .append(Component.literal("/ms help")
+                        .withStyle(ChatFormatting.ITALIC, ChatFormatting.GOLD)
+                        .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/ms help"))))
+                .append(Component.literal(" for help!"));
+        player.sendSystemMessage(text);
+
+        // Welcome message
+        RoleAPI.getInstance().get(player.getName().getString(), roles -> {
+            String bestRole = roles.getBestRole();
+            MultiServer.LOGGER.info("Best role for " + player.getName().getString() + " is " + bestRole);
+
+            // Sync settings
+            ServerSettings settings = PlayerDataManager.getPlayerData(player.getUUID()).getSettings();
+            settings.canJoin(roles.isLinked());
+            settings.adaptFromRole(bestRole);
+
+            if (!settings.canJoin()) {
+                // Player is not linked
+                player.sendSystemMessage(Component.literal("You need to link your Discord account. Click here to head to the Discord server.").withStyle(ChatFormatting.RED).withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, Config.getInstance().discordLink))));
+                return;
+            } else {
+                // Welcome message
+                String s = Config.getInstance().roleWelcome.get(bestRole);
+                if (s != null) {
+                    player.sendSystemMessage(Component.literal(s));
+                }
+            }
+
+            // Sync color
+            PlayerTeam team = player.getScoreboard().getPlayerTeam(bestRole);
+            if (team == null) {
+                team = player.getScoreboard().addPlayerTeam(bestRole);
+                team.setColor(ChatFormatting.getByName(Config.getInstance().roleColors.get(bestRole)));
+            }
+            player.getScoreboard().addPlayerToTeam(team.getName(), team);
+        });
     }
 }

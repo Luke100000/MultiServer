@@ -1,5 +1,6 @@
 package net.conczin.multiserver.server;
 
+import net.conczin.multiserver.Config;
 import net.minecraft.nbt.CompoundTag;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,6 +15,7 @@ public class ServerSettings {
     private int targetViewDistance = 20;
     private int targetSimulationDistance = 10;
     private int targetChunkTickDistance = 128;
+    private boolean canJoin;
 
     public ServerSettings() {
     }
@@ -25,6 +27,7 @@ public class ServerSettings {
         this.targetViewDistance = tag.getInt("maxViewDistance");
         this.targetSimulationDistance = tag.getInt("maxSimulationDistance");
         this.targetChunkTickDistance = tag.getInt("maxChunkTickDistance");
+        this.canJoin = tag.getBoolean("canJoin");
     }
 
     public void setThreads(int threads) {
@@ -83,6 +86,14 @@ public class ServerSettings {
         this.targetChunkTickDistance = targetChunkTickDistance;
     }
 
+    public void canJoin(boolean canJoin) {
+        this.canJoin = canJoin;
+    }
+
+    public boolean canJoin() {
+        return canJoin;
+    }
+
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
         tag.putInt("threads", threads);
@@ -91,6 +102,16 @@ public class ServerSettings {
         tag.putInt("targetViewDistance", targetViewDistance);
         tag.putInt("targetSimulationDistance", targetSimulationDistance);
         tag.putInt("targetChunkTickDistance", targetChunkTickDistance);
+        tag.putBoolean("canJoin", canJoin);
         return tag;
+    }
+
+    public void adaptFromRole(String bestRole) {
+        Config config = Config.getInstance();
+        setThreads(config.roleThreads.getOrDefault(bestRole, 2));
+        setTargetViewDistance(config.roleViewDistance.getOrDefault(bestRole, 10));
+        setTargetSimulationDistance(config.roleSimulationDistance.getOrDefault(bestRole, 8));
+        setTargetChunkTickDistance(config.roleChunkTickDistance.getOrDefault(bestRole, 96));
+        setMspt(config.roleMSPTTarget.getOrDefault(bestRole, 15));
     }
 }

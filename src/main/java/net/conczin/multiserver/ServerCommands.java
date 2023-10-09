@@ -80,7 +80,23 @@ public class ServerCommands {
                                 .executes(ServerCommands::allowGuests)))
 
                 .then(Commands.literal("members")
-                        .executes(ServerCommands::printMembers)));
+                        .executes(ServerCommands::printMembers))
+
+                .then(Commands.literal("performance")
+                        .executes(ServerCommands::printPerformance)));
+    }
+
+    private static int printPerformance(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        ServerSettings settings = PlayerDataManager.getPlayerData(context.getSource().getPlayerOrException().getUUID()).getSettings();
+        context.getSource().sendSuccess(() -> Component.literal(String.format(
+                "Your server is currently running with %d threads, a target mspt of %d, %d view distance, %d simulation distance and %d chunk tick distance.",
+                settings.getThreads(),
+                settings.getMspt(),
+                settings.getTargetViewDistance(),
+                settings.getTargetSimulationDistance(),
+                settings.getTargetChunkTickDistance()
+        )), false);
+        return 0;
     }
 
     private static int help(CommandContext<CommandSourceStack> context) {

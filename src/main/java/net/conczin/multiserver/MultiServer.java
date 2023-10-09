@@ -2,6 +2,8 @@ package net.conczin.multiserver;
 
 import com.mojang.logging.LogUtils;
 import net.fabricmc.api.DedicatedServerModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import org.slf4j.Logger;
 
 public class MultiServer implements DedicatedServerModInitializer {
@@ -23,5 +25,9 @@ public class MultiServer implements DedicatedServerModInitializer {
                 e.printStackTrace();
             }
         }
+
+        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            SERVER_MANAGER.onPlayerJoin(handler.player);
+        });
     }
 }
