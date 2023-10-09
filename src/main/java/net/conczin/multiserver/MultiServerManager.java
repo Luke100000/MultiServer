@@ -354,8 +354,8 @@ public class MultiServerManager {
             PlayerTeam team = player.getScoreboard().getPlayerTeam(bestRole);
             if (team == null) {
                 team = player.getScoreboard().addPlayerTeam(bestRole);
-                team.setColor(ChatFormatting.getByName(Config.getInstance().roleColors.get(bestRole)));
             }
+            team.setColor(ChatFormatting.getByName(Config.getInstance().roleColors.get(bestRole)));
             player.getScoreboard().addPlayerToTeam(team.getName(), team);
         });
     }
