@@ -5,6 +5,7 @@ import net.conczin.multiserver.server.CoMinecraftServer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,18 @@ public class HealthMonitor {
         stats.add(new PrometheusStats("java_max_memory", Runtime.getRuntime().maxMemory(), Map.of()));
         stats.add(new PrometheusStats("java_free_memory", Runtime.getRuntime().freeMemory(), Map.of()));
         stats.add(new PrometheusStats("java_processor_count", Runtime.getRuntime().availableProcessors(), Map.of()));
+
+        // Member stats
+        Map<String, Integer> roles = new HashMap<>();
+        for (CoMinecraftServer server : manager.SERVERS.values()) {
+            server.getPlayerList().getPlayers().forEach(player -> {
+                String name = player.getTeam() == null ? "default" : player.getTeam().getName();
+                roles.put(name, roles.getOrDefault(name, 0) + 1);
+            });
+        }
+        for (Map.Entry<String, Integer> entry : roles.entrySet()) {
+            stats.add(new PrometheusStats("role", entry.getValue(), Map.of("role", entry.getKey())));
+        }
 
         // Manager stats
         stats.add(new PrometheusStats("manager_server_count", manager.SERVERS.size(), Map.of()));
