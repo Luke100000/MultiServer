@@ -12,17 +12,14 @@ public class Utils {
 
     public static void copyFolder(Path source, Path target, CopyOption... options) throws IOException {
         Files.walkFileTree(source, new SimpleFileVisitor<>() {
-
             @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-                    throws IOException {
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
                 Files.createDirectories(target.resolve(source.relativize(dir).toString()));
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                    throws IOException {
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 Files.copy(file, target.resolve(source.relativize(file).toString()), options);
                 return FileVisitResult.CONTINUE;
             }

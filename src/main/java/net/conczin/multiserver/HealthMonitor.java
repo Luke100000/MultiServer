@@ -22,7 +22,7 @@ public class HealthMonitor {
         // Java stats
         stats.add(new PrometheusStats("java_total_memory", Runtime.getRuntime().totalMemory(), Map.of()));
         stats.add(new PrometheusStats("java_max_memory", Runtime.getRuntime().maxMemory(), Map.of()));
-        stats.add(new PrometheusStats("java_current_memory", Runtime.getRuntime().freeMemory(), Map.of()));
+        stats.add(new PrometheusStats("java_free_memory", Runtime.getRuntime().freeMemory(), Map.of()));
         stats.add(new PrometheusStats("java_processor_count", Runtime.getRuntime().availableProcessors(), Map.of()));
 
         // Manager stats

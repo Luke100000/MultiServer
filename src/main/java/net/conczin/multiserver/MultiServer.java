@@ -8,7 +8,7 @@ public class MultiServer implements DedicatedServerModInitializer {
     public static final Logger LOGGER = LogUtils.getLogger();
     public static final String MOD_ID = "multiServer";
 
-    public static final MultiServerManager serverManager = new MultiServerManager();
+    public static final MultiServerManager SERVER_MANAGER = new MultiServerManager();
 
     @Override
     public void onInitializeServer() {

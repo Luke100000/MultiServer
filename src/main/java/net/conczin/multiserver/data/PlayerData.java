@@ -91,7 +91,7 @@ public class PlayerData extends TidySavedData {
         // The instance creator is always the owner
         permissions.put(uuid, PermissionGroup.OWNER);
 
-        CoMinecraftServer server = MultiServer.serverManager.SERVERS.get(getRoot());
+        CoMinecraftServer server = MultiServer.SERVER_MANAGER.SERVERS.get(getRoot());
         if (server != null) {
             initPermissions(server);
         }

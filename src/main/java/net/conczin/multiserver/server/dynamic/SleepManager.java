@@ -22,7 +22,7 @@ public class SleepManager {
             if (idle > TICKS_UNTIL_SLEEP) {
                 MultiServer.LOGGER.info("Server is idle, shutting down");
                 try {
-                    MultiServer.serverManager.shutdownServer(server.getRoot());
+                    MultiServer.SERVER_MANAGER.shutdownServer(server.getRoot());
                 } catch (Exceptions.ServerDoesNotExistException e) {
                     throw new RuntimeException(e);
                 }

@@ -25,10 +25,10 @@ public class MinecraftServerMixin {
         MinecraftServer server = ((MinecraftServer) (Object) this);
         if (server instanceof CoMinecraftServer coServerInstance) {
             MultiServer.LOGGER.info("Redirecting executor of {} to a fixed thread pool with 2 threads", coServerInstance.getRoot());
-            return Executors.newFixedThreadPool(MultiServer.serverManager.currentSettings.getThreads());
+            return Executors.newFixedThreadPool(MultiServer.SERVER_MANAGER.currentSettings.getThreads());
         } else {
             if (server instanceof DedicatedServer dedicatedServer) {
-                MultiServer.serverManager.setMainServer(dedicatedServer);
+                MultiServer.SERVER_MANAGER.setMainServer(dedicatedServer);
             }
             return Util.backgroundExecutor();
         }
@@ -38,10 +38,10 @@ public class MinecraftServerMixin {
     private void multiServer$injectHalt(boolean bl, CallbackInfo ci) {
         //noinspection ConstantConditions
         if (((MinecraftServer) (Object) this) instanceof DedicatedServer) {
-            List<String> servers = MultiServer.serverManager.SERVERS.values().stream().map(CoMinecraftServer::getRoot).toList();
+            List<String> servers = MultiServer.SERVER_MANAGER.SERVERS.values().stream().map(CoMinecraftServer::getRoot).toList();
             servers.forEach(root -> {
                 try {
-                    MultiServer.serverManager.shutdownServer(root);
+                    MultiServer.SERVER_MANAGER.shutdownServer(root);
                 } catch (Exceptions.ServerDoesNotExistException e) {
                     e.printStackTrace();
                 }

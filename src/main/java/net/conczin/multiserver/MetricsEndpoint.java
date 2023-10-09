@@ -19,7 +19,7 @@ public class MetricsEndpoint {
     static class Handler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
-            String response = MultiServer.serverManager.healthMonitor.getPrometheusReport();
+            String response = MultiServer.SERVER_MANAGER.healthMonitor.getPrometheusReport();
             t.sendResponseHeaders(200, response.length());
             OutputStream os = t.getResponseBody();
             os.write(response.getBytes());

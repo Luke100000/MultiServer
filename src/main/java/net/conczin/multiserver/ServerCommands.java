@@ -208,16 +208,16 @@ public class ServerCommands {
     }
 
     private static void joinPlayer(CommandContext<CommandSourceStack> context, PlayerData hostPlayerData) {
-        if (!MultiServer.serverManager.SERVERS.containsKey(hostPlayerData.getRoot())) {
+        if (!MultiServer.SERVER_MANAGER.SERVERS.containsKey(hostPlayerData.getRoot())) {
             context.getSource().sendSuccess(() -> Component.literal("Launching server..."), false);
         }
 
-        if (MultiServer.serverManager.FREE_PORTS.isEmpty()) {
+        if (MultiServer.SERVER_MANAGER.FREE_PORTS.isEmpty()) {
             context.getSource().sendFailure(Component.literal("Server is full right now, please wait until a server slot becomes free."));
             return;
         }
 
-        MultiServer.serverManager.launchServer(hostPlayerData, server -> {
+        MultiServer.SERVER_MANAGER.launchServer(hostPlayerData, server -> {
             context.getSource().sendSuccess(() -> buildTeleportationComponent("port_" + server.getPort(), "Click to join!"), false);
         });
     }
@@ -232,14 +232,14 @@ public class ServerCommands {
         String root = context.getArgument("root", String.class);
         Integer port = context.getArgument("port", Integer.class);
 
-        if (MultiServer.serverManager.SERVERS.containsKey(root)) {
+        if (MultiServer.SERVER_MANAGER.SERVERS.containsKey(root)) {
             context.getSource().sendFailure(Component.literal("Server already running."));
             return 1;
         } else {
             context.getSource().sendSuccess(() -> Component.literal("Starting server."), false);
 
             try {
-                MultiServer.serverManager.launchServer(root, port, new ServerSettings(), server -> {
+                MultiServer.SERVER_MANAGER.launchServer(root, port, new ServerSettings(), server -> {
                     context.getSource().sendSuccess(() -> Component.literal("Server started."), false);
                 });
             } catch (Exceptions.ServerAlreadyRunningException | Exceptions.PortInUseException e) {
@@ -254,7 +254,7 @@ public class ServerCommands {
         String root = context.getArgument("root", String.class);
 
         try {
-            MultiServer.serverManager.shutdownServer(root);
+            MultiServer.SERVER_MANAGER.shutdownServer(root);
         } catch (Exceptions.ServerDoesNotExistException e) {
             context.getSource().sendFailure(Component.literal(e.getMessage()));
         }
