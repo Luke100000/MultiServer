@@ -229,8 +229,15 @@ public class ServerCommands {
         }
 
         if (MultiServer.SERVER_MANAGER.FREE_PORTS.isEmpty()) {
-            context.getSource().sendFailure(Component.literal("Server is full right now, please wait until a server slot becomes free."));
-            return;
+            if (hostPlayerData.getSettings().hasPremiumSlot()) {
+                if (MultiServer.SERVER_MANAGER.PREMIUM_PORTS.isEmpty()) {
+                    context.getSource().sendFailure(Component.literal("Sorry, the server is quite full. Try again later."));
+                    return;
+                }
+            } else {
+                context.getSource().sendFailure(Component.literal("Server is full right now, please wait until a server slot becomes free or donate to get access to some spare slots."));
+                return;
+            }
         }
 
         MultiServer.SERVER_MANAGER.launchServer(hostPlayerData, server -> {

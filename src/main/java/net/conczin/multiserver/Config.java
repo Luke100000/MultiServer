@@ -1,5 +1,6 @@
 package net.conczin.multiserver;
 
+import java.util.List;
 import java.util.Map;
 
 public final class Config extends JsonConfig {
@@ -10,14 +11,28 @@ public final class Config extends JsonConfig {
     }
 
     public String templateWorld = "template";
-
     public String discordLink = "https://discord.gg/AajGgsKfhn";
-
     public String discordGuild = "1160515751992639488";
-
     public int metricsPort = 8000;
-    public int firstPort = 25001;
-    public int lastPort = 25032;
+
+    public List<Integer> freePorts = List.of(
+            25001,
+            25002,
+            25003,
+            25004,
+            25005,
+            25006,
+            25007,
+            25008,
+            25009
+    );
+    public List<Integer> premiumPorts = List.of(
+            25010,
+            25011,
+            25012,
+            25013,
+            25014
+    );
 
     public Map<String, String> roleColors = Map.of(
             "Supporter", "ORANGE",
@@ -67,5 +82,12 @@ public final class Config extends JsonConfig {
             "Gold", 30,
             "Iron", 25,
             "default", 15
+    );
+    public Map<String, Boolean> premiumSlots = Map.of(
+            "Supporter", true,
+            "Diamond", true,
+            "Gold", true,
+            "Iron", true,
+            "default", false
     );
 }

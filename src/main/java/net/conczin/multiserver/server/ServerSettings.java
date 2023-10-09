@@ -16,6 +16,7 @@ public class ServerSettings {
     private int targetSimulationDistance = 10;
     private int targetChunkTickDistance = 128;
     private boolean canJoin;
+    private boolean premiumSlots;
 
     public ServerSettings() {
     }
@@ -28,6 +29,7 @@ public class ServerSettings {
         this.targetSimulationDistance = tag.getInt("maxSimulationDistance");
         this.targetChunkTickDistance = tag.getInt("maxChunkTickDistance");
         this.canJoin = tag.getBoolean("canJoin");
+        this.premiumSlots = tag.getBoolean("premiumSlots");
     }
 
     public void setThreads(int threads) {
@@ -94,6 +96,14 @@ public class ServerSettings {
         return canJoin;
     }
 
+    public boolean hasPremiumSlot() {
+        return premiumSlots;
+    }
+
+    public void setPremiumSlots(boolean premiumSlots) {
+        this.premiumSlots = premiumSlots;
+    }
+
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
         tag.putInt("threads", threads);
@@ -103,6 +113,7 @@ public class ServerSettings {
         tag.putInt("targetSimulationDistance", targetSimulationDistance);
         tag.putInt("targetChunkTickDistance", targetChunkTickDistance);
         tag.putBoolean("canJoin", canJoin);
+        tag.putBoolean("premiumSlots", premiumSlots);
         return tag;
     }
 
@@ -113,5 +124,6 @@ public class ServerSettings {
         setTargetSimulationDistance(config.roleSimulationDistance.getOrDefault(bestRole, 8));
         setTargetChunkTickDistance(config.roleChunkTickDistance.getOrDefault(bestRole, 96));
         setMspt(config.roleMSPTTarget.getOrDefault(bestRole, 15));
+        setPremiumSlots(config.premiumSlots.getOrDefault(bestRole, false));
     }
 }

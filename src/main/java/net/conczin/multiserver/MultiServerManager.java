@@ -66,6 +66,7 @@ import java.util.function.Consumer;
 
 public class MultiServerManager {
     public final HashSet<Integer> FREE_PORTS = new HashSet<>();
+    public final HashSet<Integer> PREMIUM_PORTS = new HashSet<>();
     public final HashMap<String, CoMinecraftServer> SERVERS = new HashMap<>();
     public final HashMap<String, ServerSettings> SETTINGS = new HashMap<>();
     public ServerSettings currentSettings;
@@ -76,9 +77,8 @@ public class MultiServerManager {
     private DedicatedServer lobbyServer;
 
     public MultiServerManager() {
-        for (int port = Config.getInstance().firstPort; port <= Config.getInstance().lastPort; port++) {
-            FREE_PORTS.add(port);
-        }
+        FREE_PORTS.addAll(Config.getInstance().freePorts);
+        PREMIUM_PORTS.addAll(Config.getInstance().premiumPorts);
     }
 
     /**
@@ -95,16 +95,30 @@ public class MultiServerManager {
         synchronized (FREE_PORTS) {
             // Reserve a port
             int port;
+            boolean premium = false;
             try {
                 port = FREE_PORTS.iterator().next();
-            } catch (NoSuchElementException e) {
-                // nop
-                return;
+            } catch (NoSuchElementException ignored1) {
+                try {
+                    if (player.getSettings().hasPremiumSlot()) {
+                        port = PREMIUM_PORTS.iterator().next();
+                        premium = true;
+                    } else {
+                        return;
+                    }
+                } catch (NoSuchElementException ignored2) {
+                    // nop
+                    return;
+                }
             }
 
             try {
                 if (launchServer(player.getRoot(), port, player.getSettings(), callback)) {
-                    FREE_PORTS.remove(port);
+                    if (premium) {
+                        PREMIUM_PORTS.remove(port);
+                    } else {
+                        FREE_PORTS.remove(port);
+                    }
                 }
             } catch (Exceptions.ServerAlreadyRunningException | Exceptions.PortInUseException e) {
                 // nop
@@ -146,7 +160,14 @@ public class MultiServerManager {
         server.halt(false);
 
         SERVERS.remove(root);
-        FREE_PORTS.add(server.getServerPort());
+
+        // Free the port
+        int port = server.getServerPort();
+        if (Config.getInstance().premiumPorts.contains(port)) {
+            PREMIUM_PORTS.add(port);
+        } else {
+            FREE_PORTS.add(port);
+        }
     }
 
     private void cloneTemplateIfNeeded(String root) {
