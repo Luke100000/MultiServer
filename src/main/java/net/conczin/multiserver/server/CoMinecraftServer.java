@@ -150,7 +150,11 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
         if (!OldUsersConverter.serverReadyAfterUserconversion(this)) {
             return false;
         } else {
-            this.setPlayerList(new CoServerPlayerList(this, this.registries(), this.playerDataStorage));
+            synchronized (CoServerPlayerList.class) {
+                CoServerPlayerList.CURRENT_SERVER = this;
+                this.setPlayerList(new CoServerPlayerList(this, this.registries(), this.playerDataStorage));
+                CoServerPlayerList.CURRENT_SERVER = null;
+            }
             this.dynamicManager = new DynamicManager(this);
 
             long time = Util.getNanos();

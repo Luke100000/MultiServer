@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 public class CoServerPlayerList extends PlayerList {
+    public static CoMinecraftServer CURRENT_SERVER;
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public CoServerPlayerList(CoMinecraftServer dedicatedServer, LayeredRegistryAccess<RegistryLayer> layeredRegistryAccess, PlayerDataStorage playerDataStorage) {
