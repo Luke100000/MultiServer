@@ -346,48 +346,61 @@ public class MultiServerManager {
 
     public void onPlayerJoin(ServerPlayer player) {
         // Help message
-        MutableComponent text = Component.literal("Welcome to MultiServer! Run ")
-                .append(Component.literal("/ms help")
-                        .withStyle(ChatFormatting.ITALIC, ChatFormatting.GOLD)
-                        .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/ms help"))))
-                .append(Component.literal(" for help!"));
-        player.sendSystemMessage(text);
+        if (player.getServer() instanceof CoMinecraftServer) {
+            MutableComponent text = Component.literal("Run ")
+                    .append(Component.literal("/ms leave")
+                            .withStyle(ChatFormatting.ITALIC, ChatFormatting.GOLD)
+                            .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/ms leave"))))
+                    .append(Component.literal(" to return to the lobby."));
+            player.sendSystemMessage(text);
+        } else {
+            MutableComponent text = Component.literal("Welcome to MultiServer! Run ")
+                    .append(Component.literal("/ms help")
+                            .withStyle(ChatFormatting.ITALIC, ChatFormatting.GOLD)
+                            .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/ms help"))))
+                    .append(Component.literal(" for help!"));
+            player.sendSystemMessage(text);
 
-        // Welcome message
-        RoleAPI.getInstance().get(player.getName().getString(), roles -> {
-            String bestRole = roles.getBestRole();
-            MultiServer.LOGGER.info("Best role for " + player.getName().getString() + " is " + bestRole);
+            // Welcome message
+            RoleAPI.getInstance().get(player.getName().getString(), roles -> {
+                String bestRole = roles.getBestRole();
+                MultiServer.LOGGER.info("Best role for " + player.getName().getString() + " is " + bestRole);
 
-            // Sync settings
-            ServerSettings settings = PlayerDataManager.getPlayerData(player.getUUID()).getSettings();
-            settings.canJoin(roles.isLinked());
-            settings.adaptFromRole(bestRole);
+                // Sync settings
+                ServerSettings settings = PlayerDataManager.getPlayerData(player.getUUID()).getSettings();
+                settings.canJoin(roles.isLinked());
+                settings.adaptFromRole(bestRole);
 
-            if (!settings.canJoin()) {
-                // Player is not linked
-                player.sendSystemMessage(Component.literal("You need to link your Discord account. Click here to head to the Discord server.").withStyle(ChatFormatting.RED).withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, Config.getInstance().discordLink))));
-                return;
-            } else {
-                // Welcome message
-                String s = Config.getInstance().roleWelcome.get(bestRole);
-                if (s != null) {
-                    player.sendSystemMessage(Component.literal(s));
+                if (!settings.canJoin()) {
+                    // Player is not linked
+                    player.sendSystemMessage(Component.literal("You need to link your Discord account. Click here to head to the Discord server.").withStyle(ChatFormatting.RED).withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, Config.getInstance().discordLink))));
+                    return;
+                } else {
+                    // Welcome message
+                    String s = Config.getInstance().roleWelcome.get(bestRole);
+                    if (s != null) {
+                        player.sendSystemMessage(Component.literal(s));
+                    }
                 }
-            }
 
-            // Sync color
-            PlayerTeam team = player.getScoreboard().getPlayerTeam(bestRole);
-            if (team == null) {
-                team = player.getScoreboard().addPlayerTeam(bestRole);
-            }
-            String color = Config.getInstance().roleColors.get(bestRole);
-            ChatFormatting formatting = ChatFormatting.getByName(color);
-            if (formatting != null) {
-                team.setColor(formatting);
-            } else {
-                MultiServer.LOGGER.warn("Unknown color " + color + " for role " + bestRole);
-            }
-            player.getScoreboard().addPlayerToTeam(team.getName(), team);
-        });
+                // Sync color
+                setColor(player, bestRole);
+            });
+        }
+    }
+
+    private static void setColor(ServerPlayer player, String bestRole) {
+        PlayerTeam team = player.getScoreboard().getPlayerTeam(bestRole);
+        if (team == null) {
+            team = player.getScoreboard().addPlayerTeam(bestRole);
+        }
+        String color = Config.getInstance().roleColors.get(bestRole);
+        ChatFormatting formatting = ChatFormatting.getByName(color);
+        if (formatting != null) {
+            team.setColor(formatting);
+        } else {
+            MultiServer.LOGGER.warn("Unknown color " + color + " for role " + bestRole);
+        }
+        player.getScoreboard().addPlayerToTeam(team.getName(), team);
     }
 }

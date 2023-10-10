@@ -15,6 +15,7 @@ import net.conczin.multiserver.server.CoMinecraftServer;
 import net.conczin.multiserver.server.ServerSettings;
 import net.conczin.multiserver.utils.Exceptions;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -224,6 +225,11 @@ public class ServerCommands {
     }
 
     private static void joinPlayer(CommandContext<CommandSourceStack> context, PlayerData hostPlayerData) {
+        if (!hostPlayerData.getSettings().canJoin()) {
+            context.getSource().sendFailure(Component.literal("Your Discord account is not yet linked.").withStyle(ChatFormatting.RED));
+            return;
+        }
+
         if (!MultiServer.SERVER_MANAGER.SERVERS.containsKey(hostPlayerData.getRoot())) {
             context.getSource().sendSuccess(() -> Component.literal("Launching server..."), false);
         }
