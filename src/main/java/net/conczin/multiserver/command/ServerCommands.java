@@ -1,4 +1,4 @@
-package net.conczin.multiserver;
+package net.conczin.multiserver.command;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.arguments.BoolArgumentType;
@@ -7,18 +7,17 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.conczin.multiserver.MultiServer;
 import net.conczin.multiserver.data.PermissionGroup;
 import net.conczin.multiserver.data.PlayerData;
 import net.conczin.multiserver.data.PlayerDataManager;
+import net.conczin.multiserver.server.CoMinecraftServer;
 import net.conczin.multiserver.server.ServerSettings;
 import net.conczin.multiserver.utils.Exceptions;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.GameProfileCache;
@@ -134,7 +133,8 @@ public class ServerCommands {
     }
 
     private static int leaveServer(CommandContext<CommandSourceStack> context) {
-        context.getSource().sendSuccess(() -> buildTeleportationComponent("lobby", "Click to return to lobby!"), false);
+        // context.getSource().sendSuccess(() -> buildTeleportationComponent("lobby", "Click to return to lobby!"), false);
+        teleportToServer(context, "lobby");
         return 0;
     }
 
@@ -241,14 +241,22 @@ public class ServerCommands {
         }
 
         MultiServer.SERVER_MANAGER.launchServer(hostPlayerData, server -> {
-            context.getSource().sendSuccess(() -> buildTeleportationComponent("port_" + server.getPort(), "Click to join!"), false);
+            // context.getSource().sendSuccess(() -> buildTeleportationComponent("port_" + server.getPort(), "Click to join!"), false);
+            teleportToServer(context, server);
         });
     }
 
-    private static MutableComponent buildTeleportationComponent(String server, String text) {
-        return Component.literal(text)
-                .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD)
-                .withStyle(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/server " + server)));
+    private static void teleportToServer(CommandContext<CommandSourceStack> context, String server) {
+        try {
+            String username = context.getSource().getPlayerOrException().getName().getString();
+            MultiServer.communication.send("teleport " + username + " " + server);
+        } catch (CommandSyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void teleportToServer(CommandContext<CommandSourceStack> context, CoMinecraftServer server) {
+        teleportToServer(context, "port_" + server.getPort());
     }
 
     private static int startServer(CommandContext<CommandSourceStack> context) {

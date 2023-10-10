@@ -137,6 +137,8 @@ public class MultiServerManager {
     public boolean launchServer(String root, int port, ServerSettings settings, Consumer<CoMinecraftServer> callback) throws Exceptions.ServerAlreadyRunningException, Exceptions.PortInUseException {
         if (SERVERS.containsKey(root)) throw new Exceptions.ServerAlreadyRunningException();
 
+        MultiServer.communication.send("server register " + "port_" + port + " " + port);
+
         SETTINGS.put(root, settings);
         CoMinecraftServer dedicatedServer = launchServer(args, root, port, settings, callback);
 
@@ -160,6 +162,8 @@ public class MultiServerManager {
         server.halt(false);
 
         SERVERS.remove(root);
+
+        MultiServer.communication.send("server register " + "port_" + server.getPort() + " " + server.getPort());
 
         // Free the port
         int port = server.getServerPort();
@@ -376,7 +380,13 @@ public class MultiServerManager {
             if (team == null) {
                 team = player.getScoreboard().addPlayerTeam(bestRole);
             }
-            team.setColor(ChatFormatting.getByName(Config.getInstance().roleColors.get(bestRole)));
+            String color = Config.getInstance().roleColors.get(bestRole);
+            ChatFormatting formatting = ChatFormatting.getByName(color);
+            if (formatting != null) {
+                team.setColor(formatting);
+            } else {
+                MultiServer.LOGGER.warn("Unknown color " + color + " for role " + bestRole);
+            }
             player.getScoreboard().addPlayerToTeam(team.getName(), team);
         });
     }
