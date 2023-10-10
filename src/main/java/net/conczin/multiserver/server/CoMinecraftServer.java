@@ -9,6 +9,7 @@ import net.conczin.multiserver.server.dynamic.SleepManager;
 import net.minecraft.*;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.*;
 import net.minecraft.server.dedicated.DedicatedServerProperties;
 import net.minecraft.server.dedicated.DedicatedServerSettings;
@@ -277,13 +278,23 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
     public void tickChildren(@NotNull BooleanSupplier booleanSupplier) {
         super.tickChildren(booleanSupplier);
 
-        this.handleConsoleInputs();
-
         if (this.dynamicManager != null) {
             this.dynamicManager.tick();
         }
 
+        fixPlayerLocation();
+
         this.sleepManager.tick();
+    }
+
+    private void fixPlayerLocation() {
+        double absoluteMaxWorldSize = Math.pow(this.getAbsoluteMaxWorldSize(), 2.0);
+        for (ServerPlayer player : this.getPlayerList().getPlayers()) {
+            if (player.getX() * player.getX() + player.getZ() * player.getZ() > absoluteMaxWorldSize) {
+                this.getPlayerList().respawn(player, true);
+                player.sendSystemMessage(Component.literal("Whoops, you reached the end of the world."));
+            }
+        }
     }
 
     @Override
@@ -293,14 +304,6 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
 
     public void handleConsoleInput(String string, CommandSourceStack commandSourceStack) {
         this.consoleInput.add(new ConsoleInput(string, commandSourceStack));
-    }
-
-    public void handleConsoleInputs() {
-        while (!this.consoleInput.isEmpty()) {
-            ConsoleInput consoleInput = this.consoleInput.remove(0);
-            this.getCommands().performPrefixedCommand(consoleInput.source, consoleInput.msg);
-        }
-
     }
 
     public int getRateLimitPacketsPerSecond() {
@@ -380,7 +383,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
 
     @Override
     public int getAbsoluteMaxWorldSize() {
-        return this.getProperties().maxWorldSize;
+        return getServerSettings().getWorldSize();
     }
 
     @Override

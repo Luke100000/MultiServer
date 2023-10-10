@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import net.conczin.multiserver.command.ServerCommands;
 import net.conczin.multiserver.velocity.Communication;
 import net.fabricmc.api.DedicatedServerModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import org.slf4j.Logger;
 
@@ -31,10 +32,17 @@ public class MultiServer implements DedicatedServerModInitializer {
             }
         }
 
+        // Register server tick event
+        ServerTickEvents.START_SERVER_TICK.register(server -> {
+            SERVER_MANAGER.tick();
+        });
+
+        // Register player join event
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             SERVER_MANAGER.onPlayerJoin(handler.player);
         });
 
+        // Open velocity communication
         try {
             communication = new Communication();
         } catch (IOException e) {

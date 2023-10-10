@@ -13,6 +13,12 @@ import java.util.Map;
 public class HealthMonitor {
     private final MultiServerManager manager;
 
+    private static final int MS_PER_UPDATE = 10000;
+
+    private long lastTick;
+    private long lastMinimumMemory;
+    private long currentMinimumMemory = Long.MAX_VALUE;
+
     public HealthMonitor(MultiServerManager manager) {
         this.manager = manager;
     }
@@ -24,6 +30,7 @@ public class HealthMonitor {
         stats.add(new PrometheusStats("java_total_memory", Runtime.getRuntime().totalMemory(), Map.of()));
         stats.add(new PrometheusStats("java_max_memory", Runtime.getRuntime().maxMemory(), Map.of()));
         stats.add(new PrometheusStats("java_free_memory", Runtime.getRuntime().freeMemory(), Map.of()));
+        stats.add(new PrometheusStats("java_free_min_memory", lastMinimumMemory, Map.of()));
         stats.add(new PrometheusStats("java_processor_count", Runtime.getRuntime().availableProcessors(), Map.of()));
 
         // Member stats
@@ -40,6 +47,8 @@ public class HealthMonitor {
 
         // Manager stats
         stats.add(new PrometheusStats("manager_server_count", manager.SERVERS.size(), Map.of()));
+        stats.add(new PrometheusStats("manager_free_slots", manager.FREE_PORTS.size(), Map.of()));
+        stats.add(new PrometheusStats("manager_premium_slots", manager.PREMIUM_PORTS.size(), Map.of()));
 
         // Server stats
         populateForServer(stats, manager.getLobbyServer(), "lobby");
@@ -63,6 +72,15 @@ public class HealthMonitor {
 
     public String getPrometheusReport() {
         return getStats().stream().map(PrometheusStats::toString).reduce((a, b) -> a + "\n" + b).orElse("");
+    }
+
+    public void tick() {
+        if (lastTick / MS_PER_UPDATE != System.currentTimeMillis() / MS_PER_UPDATE) {
+            lastTick = System.currentTimeMillis();
+            lastMinimumMemory = currentMinimumMemory;
+            currentMinimumMemory = Long.MAX_VALUE;
+        }
+        currentMinimumMemory = Math.min(currentMinimumMemory, Runtime.getRuntime().freeMemory());
     }
 
     static class PrometheusStats {

@@ -247,20 +247,13 @@ public class MultiServerManager {
             WorldData worldData = worldStem.worldData();
             levelStorageAccess.saveDataTag(frozen, worldData);
             currentSettings = SETTINGS.get(root);
-            final CoMinecraftServer dedicatedServer = CoMinecraftServer.spinCoServer(thread -> {
+
+            return CoMinecraftServer.spinCoServer(thread -> {
                 CoMinecraftServer server = new CoMinecraftServer(thread, root, settings, callback, levelStorageAccess, packRepository, worldStem, dedicatedServerSettings, DataFixers.getDataFixer(), services, LoggerChunkProgressListener::new);
                 server.setPort(port);
                 server.setDemo(optionSet.has(demo));
                 return server;
             });
-
-            // Update world size
-            for (ServerLevel allLevel : dedicatedServer.getAllLevels()) {
-                allLevel.getWorldBorder().setCenter(0, 0);
-                allLevel.getWorldBorder().setSize(settings.getWorldSize());
-            }
-
-            return dedicatedServer;
         } catch (Exception exception2) {
             MultiServer.LOGGER.error(LogUtils.FATAL_MARKER, "Failed to start the minecraft server", exception2);
             return null;
@@ -406,5 +399,9 @@ public class MultiServerManager {
             MultiServer.LOGGER.warn("Unknown color " + color + " for role " + bestRole);
         }
         player.getScoreboard().addPlayerToTeam(team.getName(), team);
+    }
+
+    public void tick() {
+        healthMonitor.tick();
     }
 }
