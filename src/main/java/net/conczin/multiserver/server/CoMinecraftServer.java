@@ -288,11 +288,12 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
     }
 
     private void fixPlayerLocation() {
-        double absoluteMaxWorldSize = Math.pow(this.getAbsoluteMaxWorldSize(), 2.0);
+        double absoluteMaxWorldSize = Math.pow(this.getAbsoluteMaxWorldSize() + 2.0, 2.0);
         for (ServerPlayer player : this.getPlayerList().getPlayers()) {
-            if (player.getX() * player.getX() + player.getZ() * player.getZ() > absoluteMaxWorldSize) {
-                this.getPlayerList().respawn(player, true);
+            double distance = player.getX() * player.getX() + player.getZ() * player.getZ();
+            if (distance > absoluteMaxWorldSize) {
                 player.sendSystemMessage(Component.literal("Whoops, you reached the end of the world."));
+                this.getPlayerList().respawn(player, true);
             }
         }
     }

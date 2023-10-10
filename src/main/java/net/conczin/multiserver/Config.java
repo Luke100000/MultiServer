@@ -91,10 +91,10 @@ public final class Config extends JsonConfig {
             "default", false
     );
     public Map<String, Integer> worldSize = Map.of(
-            "Supporter", 9000,
-            "Diamond", 12000,
-            "Gold", 10000,
-            "Iron", 8000,
+            "Supporter", 6500,
+            "Diamond", 8000,
+            "Gold", 7000,
+            "Iron", 6000,
             "default", 5000
     );
 }

@@ -31,6 +31,7 @@ public class PlayerData extends TidySavedData {
         this.settings.setOwner(uuid);
 
         initPermissions();
+        setDirty();
     }
 
     public PlayerData(CompoundTag tag, UUID uuid) {
