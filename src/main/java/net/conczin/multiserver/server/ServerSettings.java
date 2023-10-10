@@ -17,7 +17,7 @@ public class ServerSettings {
     private int targetChunkTickDistance = 128;
     private boolean canJoin;
     private boolean premiumSlots;
-    private int worldSize;
+    private int worldSize = 99999999;
 
     public ServerSettings() {
     }
