@@ -28,6 +28,7 @@ public class PlayerData extends TidySavedData {
         this.uuid = uuid;
         this.defaultPermissionGroup = PermissionGroup.NONE;
         this.settings = new ServerSettings();
+        this.settings.setOwner(uuid);
 
         initPermissions();
     }
@@ -43,7 +44,9 @@ public class PlayerData extends TidySavedData {
         });
 
         this.defaultPermissionGroup = PermissionGroup.valueOf(tag.getString("defaultPermissionGroup"));
+
         this.settings = new ServerSettings(tag.getCompound("settings"));
+        this.settings.setOwner(uuid);
 
         initPermissions();
     }

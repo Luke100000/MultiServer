@@ -15,7 +15,10 @@ import net.conczin.multiserver.server.CoMinecraftServer;
 import net.conczin.multiserver.server.ServerSettings;
 import net.conczin.multiserver.utils.Exceptions;
 import net.conczin.multiserver.utils.Utils;
-import net.minecraft.*;
+import net.minecraft.ChatFormatting;
+import net.minecraft.CrashReport;
+import net.minecraft.SharedConstants;
+import net.minecraft.Util;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
@@ -30,6 +33,7 @@ import net.minecraft.server.*;
 import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.dedicated.DedicatedServerProperties;
 import net.minecraft.server.dedicated.DedicatedServerSettings;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.progress.LoggerChunkProgressListener;
 import net.minecraft.server.packs.repository.PackRepository;
@@ -239,6 +243,7 @@ public class MultiServerManager {
             if (optionSet.has(forceUpgrade)) {
                 forceUpgrade(levelStorageAccess, DataFixers.getDataFixer(), optionSet.has(eraseCache), () -> true, frozen.registryOrThrow(Registries.LEVEL_STEM));
             }
+
             WorldData worldData = worldStem.worldData();
             levelStorageAccess.saveDataTag(frozen, worldData);
             currentSettings = SETTINGS.get(root);
@@ -248,14 +253,13 @@ public class MultiServerManager {
                 server.setDemo(optionSet.has(demo));
                 return server;
             });
-            Thread thread2 = new Thread("Server Shutdown Thread") {
-                @Override
-                public void run() {
-                    dedicatedServer.halt(true);
-                }
-            };
-            thread2.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(MultiServer.LOGGER));
-            Runtime.getRuntime().addShutdownHook(thread2); // todo make one single thread to shut down all servers
+
+            // Update world size
+            for (ServerLevel allLevel : dedicatedServer.getAllLevels()) {
+                allLevel.getWorldBorder().setCenter(0, 0);
+                allLevel.getWorldBorder().setSize(settings.getWorldSize());
+            }
+
             return dedicatedServer;
         } catch (Exception exception2) {
             MultiServer.LOGGER.error(LogUtils.FATAL_MARKER, "Failed to start the minecraft server", exception2);

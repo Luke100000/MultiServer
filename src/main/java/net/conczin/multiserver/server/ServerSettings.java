@@ -17,6 +17,7 @@ public class ServerSettings {
     private int targetChunkTickDistance = 128;
     private boolean canJoin;
     private boolean premiumSlots;
+    private int worldSize;
 
     public ServerSettings() {
     }
@@ -30,6 +31,7 @@ public class ServerSettings {
         this.targetChunkTickDistance = tag.getInt("maxChunkTickDistance");
         this.canJoin = tag.getBoolean("canJoin");
         this.premiumSlots = tag.getBoolean("premiumSlots");
+        this.worldSize = tag.getInt("worldSize");
     }
 
     public void setThreads(int threads) {
@@ -104,6 +106,14 @@ public class ServerSettings {
         this.premiumSlots = premiumSlots;
     }
 
+    public int getWorldSize() {
+        return worldSize;
+    }
+
+    public void setWorldSize(int worldSize) {
+        this.worldSize = worldSize;
+    }
+
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
         tag.putInt("threads", threads);
@@ -114,6 +124,7 @@ public class ServerSettings {
         tag.putInt("targetChunkTickDistance", targetChunkTickDistance);
         tag.putBoolean("canJoin", canJoin);
         tag.putBoolean("premiumSlots", premiumSlots);
+        tag.putInt("worldSize", worldSize);
         return tag;
     }
 
@@ -125,5 +136,6 @@ public class ServerSettings {
         setTargetChunkTickDistance(config.roleChunkTickDistance.getOrDefault(bestRole, 96));
         setMspt(config.roleMSPTTarget.getOrDefault(bestRole, 15));
         setPremiumSlots(config.premiumSlots.getOrDefault(bestRole, false));
+        setWorldSize(config.worldSize.getOrDefault(bestRole, 500));
     }
 }

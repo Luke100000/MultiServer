@@ -1,12 +1,15 @@
 package net.conczin.multiserver.mixin;
 
-import net.conczin.multiserver.server.CoServerPlayerList;
+import net.conczin.multiserver.server.CoMinecraftServer;
+import net.minecraft.core.LayeredRegistryAccess;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.players.*;
-import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
+import net.minecraft.world.level.storage.PlayerDataStorage;
+import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.File;
 
@@ -16,34 +19,42 @@ import static net.minecraft.server.players.PlayerList.*;
 @Mixin(PlayerList.class)
 public abstract class PlayerListMixin {
     @Shadow
-    @Final
-    private MinecraftServer server;
-
-    @Shadow
     public abstract MinecraftServer getServer();
 
     @Unique
     private File ms$createFile(File file) {
-        if (CoServerPlayerList.CURRENT_SERVER != null) {
-            return new File(CoServerPlayerList.CURRENT_SERVER.getRoot() + "/" + file.getName());
+        if (getServer() instanceof CoMinecraftServer server) {
+            return new File(server.getRoot() + "/" + file.getName());
         } else {
             return file;
         }
     }
 
     @Final
+    @Mutable
     @Shadow
-    private final UserBanList bans = new UserBanList(ms$createFile(USERBANLIST_FILE));
+    private UserBanList bans;
 
     @Final
+    @Mutable
     @Shadow
-    private final IpBanList ipBans = new IpBanList(ms$createFile(IPBANLIST_FILE));
+    private IpBanList ipBans;
 
     @Final
+    @Mutable
     @Shadow
-    private final ServerOpList ops = new ServerOpList(ms$createFile(OPLIST_FILE));
+    private ServerOpList ops;
 
     @Final
+    @Mutable
     @Shadow
-    private final UserWhiteList whitelist = new UserWhiteList(ms$createFile(WHITELIST_FILE));
+    private UserWhiteList whitelist;
+
+    @Inject(method = "<init>(Lnet/minecraft/server/MinecraftServer;Lnet/minecraft/core/LayeredRegistryAccess;Lnet/minecraft/world/level/storage/PlayerDataStorage;I)V",           at = @At("TAIL"))
+    private void ms$injectInit(MinecraftServer minecraftServer, LayeredRegistryAccess<RegistryLayer> layeredRegistryAccess, PlayerDataStorage playerDataStorage, int i, CallbackInfo ci) {
+        bans = new UserBanList(ms$createFile(USERBANLIST_FILE));
+        ipBans = new IpBanList(ms$createFile(IPBANLIST_FILE));
+        ops = new ServerOpList(ms$createFile(OPLIST_FILE));
+        whitelist = new UserWhiteList(ms$createFile(WHITELIST_FILE));
+    }
 }

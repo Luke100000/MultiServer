@@ -32,6 +32,7 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.SkullBlockEntity;
 import net.minecraft.world.level.storage.LevelStorageSource;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -151,9 +152,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
             return false;
         } else {
             synchronized (CoServerPlayerList.class) {
-                CoServerPlayerList.CURRENT_SERVER = this;
                 this.setPlayerList(new CoServerPlayerList(this, this.registries(), this.playerDataStorage));
-                CoServerPlayerList.CURRENT_SERVER = null;
             }
             this.dynamicManager = new DynamicManager(this);
 
@@ -275,7 +274,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
     }
 
     @Override
-    public void tickChildren(BooleanSupplier booleanSupplier) {
+    public void tickChildren(@NotNull BooleanSupplier booleanSupplier) {
         super.tickChildren(booleanSupplier);
 
         this.handleConsoleInputs();
@@ -343,7 +342,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
     }
 
     @Override
-    public boolean isUnderSpawnProtection(ServerLevel serverLevel, BlockPos blockPos, Player player) {
+    public boolean isUnderSpawnProtection(@NotNull ServerLevel serverLevel, @NotNull BlockPos blockPos, @NotNull Player player) {
         return false;
     }
 
@@ -408,7 +407,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
         return "";
     }
 
-    public String runCommand(String string) {
+    public String runCommand(@NotNull String string) {
         this.rconConsoleSource.prepareForCommand();
         this.executeBlocking(() -> this.getCommands().performPrefixedCommand(this.rconConsoleSource.createCommandSourceStack(), string));
         return this.rconConsoleSource.getCommandResponse();
@@ -418,7 +417,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
         this.settings.update(properties -> properties.whiteList.update(this.registryAccess(), bl));
     }
 
-    public boolean isSingleplayerOwner(GameProfile gameProfile) {
+    public boolean isSingleplayerOwner(@NotNull GameProfile gameProfile) {
         return false;
     }
 
@@ -437,7 +436,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
     }
 
     @Override
-    public TextFilter createTextFilterForPlayer(ServerPlayer serverPlayer) {
+    public TextFilter createTextFilterForPlayer(@NotNull ServerPlayer serverPlayer) {
         return this.textFilterClient != null ? this.textFilterClient.createContext(serverPlayer.getGameProfile()) : TextFilter.DUMMY;
     }
 

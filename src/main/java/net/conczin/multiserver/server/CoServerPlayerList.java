@@ -11,13 +11,13 @@ import net.minecraft.server.dedicated.DedicatedServerProperties;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.level.storage.PlayerDataStorage;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.util.UUID;
 
 public class CoServerPlayerList extends PlayerList {
-    public static CoMinecraftServer CURRENT_SERVER;
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public CoServerPlayerList(CoMinecraftServer dedicatedServer, LayeredRegistryAccess<RegistryLayer> layeredRegistryAccess, PlayerDataStorage playerDataStorage) {
@@ -39,7 +39,7 @@ public class CoServerPlayerList extends PlayerList {
     }
 
     @Override
-    public void placeNewPlayer(Connection connection, ServerPlayer serverPlayer) {
+    public void placeNewPlayer(@NotNull Connection connection, @NotNull ServerPlayer serverPlayer) {
         super.placeNewPlayer(connection, serverPlayer);
 
         // A new user joined, verify all permissions
@@ -57,13 +57,13 @@ public class CoServerPlayerList extends PlayerList {
     }
 
     @Override
-    public void op(GameProfile gameProfile) {
+    public void op(@NotNull GameProfile gameProfile) {
         super.op(gameProfile);
         this.saveOps();
     }
 
     @Override
-    public void deop(GameProfile gameProfile) {
+    public void deop(@NotNull GameProfile gameProfile) {
         super.deop(gameProfile);
         this.saveOps();
     }
@@ -138,7 +138,7 @@ public class CoServerPlayerList extends PlayerList {
     }
 
     @Override
-    public boolean isWhiteListed(GameProfile gameProfile) {
+    public boolean isWhiteListed(@NotNull GameProfile gameProfile) {
         return !this.isUsingWhitelist() || this.isOp(gameProfile) || this.getWhiteList().isWhiteListed(gameProfile);
     }
 
@@ -148,7 +148,7 @@ public class CoServerPlayerList extends PlayerList {
     }
 
     @Override
-    public boolean canBypassPlayerLimit(GameProfile gameProfile) {
+    public boolean canBypassPlayerLimit(@NotNull GameProfile gameProfile) {
         return this.getOps().canBypassPlayerLimit(gameProfile);
     }
 }

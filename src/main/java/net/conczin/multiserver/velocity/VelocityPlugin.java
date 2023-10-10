@@ -20,7 +20,7 @@ import java.util.Map;
 public class VelocityPlugin {
     private static volatile boolean running = true;
     private final ProxyServer proxy;
-    private Map<String, ServerInfo> servers = new HashMap<>();
+    private final Map<String, ServerInfo> servers = new HashMap<>();
 
     @Inject
     public VelocityPlugin(ProxyServer proxy) {
