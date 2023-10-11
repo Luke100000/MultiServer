@@ -8,6 +8,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.conczin.multiserver.MultiServer;
+import net.conczin.multiserver.RoleAPI;
 import net.conczin.multiserver.data.PermissionGroup;
 import net.conczin.multiserver.data.PlayerData;
 import net.conczin.multiserver.data.PlayerDataManager;
@@ -225,31 +226,36 @@ public class ServerCommands {
     }
 
     private static void joinPlayer(CommandContext<CommandSourceStack> context, PlayerData hostPlayerData) {
-        if (!hostPlayerData.getSettings().canJoin()) {
-            context.getSource().sendFailure(Component.literal("Your Discord account is not yet linked.").withStyle(ChatFormatting.RED));
-            return;
-        }
-
-        if (!MultiServer.SERVER_MANAGER.SERVERS.containsKey(hostPlayerData.getRoot())) {
-            context.getSource().sendSuccess(() -> Component.literal("Launching server..."), false);
-        }
-
-        if (MultiServer.SERVER_MANAGER.FREE_PORTS.isEmpty()) {
-            if (hostPlayerData.getSettings().hasPremiumSlot()) {
-                if (MultiServer.SERVER_MANAGER.PREMIUM_PORTS.isEmpty()) {
-                    context.getSource().sendFailure(Component.literal("Sorry, the server is quite full. Try again later."));
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player != null) {
+            RoleAPI.getInstance().get(player.getName().getString(), r -> {
+                if (!r.isLinked()) {
+                    context.getSource().sendFailure(Component.literal("Your Discord account is not yet linked.").withStyle(ChatFormatting.RED));
                     return;
                 }
-            } else {
-                context.getSource().sendFailure(Component.literal("Server is full right now, please wait until a server slot becomes free or donate to get access to some spare slots."));
-                return;
-            }
-        }
 
-        MultiServer.SERVER_MANAGER.launchServer(hostPlayerData, server -> {
-            // context.getSource().sendSuccess(() -> buildTeleportationComponent("port_" + server.getPort(), "Click to join!"), false);
-            teleportToServer(context, server);
-        });
+                if (!MultiServer.SERVER_MANAGER.SERVERS.containsKey(hostPlayerData.getRoot())) {
+                    context.getSource().sendSuccess(() -> Component.literal("Launching server..."), false);
+                }
+
+                if (MultiServer.SERVER_MANAGER.FREE_PORTS.isEmpty()) {
+                    if (hostPlayerData.getSettings().hasPremiumSlot()) {
+                        if (MultiServer.SERVER_MANAGER.PREMIUM_PORTS.isEmpty()) {
+                            context.getSource().sendFailure(Component.literal("Sorry, the server is quite full. Try again later."));
+                            return;
+                        }
+                    } else {
+                        context.getSource().sendFailure(Component.literal("Server is full right now, please wait until a server slot becomes free or donate to get access to some spare slots."));
+                        return;
+                    }
+                }
+
+                MultiServer.SERVER_MANAGER.launchServer(hostPlayerData, server -> {
+                    // context.getSource().sendSuccess(() -> buildTeleportationComponent("port_" + server.getPort(), "Click to join!"), false);
+                    teleportToServer(context, server);
+                });
+            });
+        }
     }
 
     private static void teleportToServer(CommandContext<CommandSourceStack> context, String server) {

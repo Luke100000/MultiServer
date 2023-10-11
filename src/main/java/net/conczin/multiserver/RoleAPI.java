@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class RoleAPI {
-    private static final long CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+    private static final long CACHE_DURATION = 20 * 1000;
     private final Gson Gson = new Gson();
 
     public static final RoleAPI INSTANCE = new RoleAPI();
