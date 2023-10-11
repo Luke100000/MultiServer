@@ -100,7 +100,10 @@ public class RoleAPI {
         public UserRoles(Set<String> roles, boolean linked) {
             this.roles = roles;
             this.lastUpdated = System.currentTimeMillis();
-            this.bestRole = roles.stream().max(Comparator.comparingInt(r -> Config.getInstance().roleViewDistance.getOrDefault(r, 0))).orElse("default");
+            this.bestRole = roles.stream()
+                    .filter(r -> Config.getInstance().roleViewDistance.containsKey(r))
+                    .max(Comparator.comparingInt(r -> Config.getInstance().roleViewDistance.getOrDefault(r, 0)))
+                    .orElse("default");
             this.linked = linked;
         }
 

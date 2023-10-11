@@ -361,7 +361,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
     }
 
     public int getOperatorUserPermissionLevel() {
-        return this.getProperties().opPermissionLevel;
+        return 2;
     }
 
     public int getFunctionCompilationLevel() {
