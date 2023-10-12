@@ -23,8 +23,7 @@ public class MinecraftServerMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/Util;backgroundExecutor()Ljava/util/concurrent/ExecutorService;"))
     private ExecutorService multiServer$redirectBackgroundExecutor() {
         MinecraftServer server = ((MinecraftServer) (Object) this);
-        if (server instanceof CoMinecraftServer coServerInstance) {
-            MultiServer.LOGGER.info("Redirecting executor of {} to a fixed thread pool with 2 threads", coServerInstance.getRoot());
+        if (server instanceof CoMinecraftServer) {
             return Executors.newFixedThreadPool(MultiServer.SERVER_MANAGER.currentSettings.getThreads());
         } else {
             if (server instanceof DedicatedServer dedicatedServer) {

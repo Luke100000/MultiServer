@@ -33,7 +33,6 @@ import net.minecraft.server.*;
 import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.dedicated.DedicatedServerProperties;
 import net.minecraft.server.dedicated.DedicatedServerSettings;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.progress.LoggerChunkProgressListener;
 import net.minecraft.server.packs.repository.PackRepository;
@@ -184,10 +183,24 @@ public class MultiServerManager {
             //noinspection ResultOfMethodCallIgnored
             targetPath.toFile().mkdirs();
             Path templatePath = Paths.get(Config.getInstance().templateWorld + "/world");
-            try {
-                Utils.copyFolder(templatePath, targetPath);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+
+            String osName = System.getProperty("os.name").toLowerCase();
+            if (osName.contains("linux")) {
+                // For linux lets use cp as it works out of the box with btrfs deduplication
+                try {
+                    ProcessBuilder processBuilder = new ProcessBuilder("cp", "-a", templatePath.toString(), targetPath.toString());
+                    Process process = processBuilder.start();
+                    process.waitFor();
+                } catch (IOException | InterruptedException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                // Copy for non linux systems
+                try {
+                    Utils.copyFolder(templatePath, targetPath);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }

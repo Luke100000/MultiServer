@@ -135,7 +135,6 @@ public class ServerCommands {
     }
 
     private static int leaveServer(CommandContext<CommandSourceStack> context) {
-        // context.getSource().sendSuccess(() -> buildTeleportationComponent("lobby", "Click to return to lobby!"), false);
         teleportToServer(context, "lobby");
         return 0;
     }
@@ -194,13 +193,18 @@ public class ServerCommands {
         return Optional.empty();
     }
 
-    private static int joinOwn(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
-        ServerPlayer player = context.getSource().getPlayerOrException();
-        UUID playerUUID = player.getUUID();
+    private static int joinOwn(CommandContext<CommandSourceStack> context) {
+        try {
+            ServerPlayer player = context.getSource().getPlayerOrException();
+            UUID playerUUID = player.getUUID();
 
-        PlayerData hostPlayerData = PlayerDataManager.getPlayerData(playerUUID);
+            PlayerData hostPlayerData = PlayerDataManager.getPlayerData(playerUUID);
 
-        joinPlayer(context, hostPlayerData);
+            joinPlayer(context, hostPlayerData);
+        } catch (Exception e) {
+            e.printStackTrace();
+            context.getSource().sendFailure(Component.literal("An error occurred while joining the server. Try again later."));
+        }
 
         return 0;
     }
@@ -251,7 +255,6 @@ public class ServerCommands {
                 }
 
                 MultiServer.SERVER_MANAGER.launchServer(hostPlayerData, server -> {
-                    // context.getSource().sendSuccess(() -> buildTeleportationComponent("port_" + server.getPort(), "Click to join!"), false);
                     teleportToServer(context, server);
                 });
             });
