@@ -188,7 +188,7 @@ public class MultiServerManager {
             if (osName.contains("linux")) {
                 // For linux lets use cp as it works out of the box with btrfs deduplication
                 try {
-                    ProcessBuilder processBuilder = new ProcessBuilder("cp", "-a", templatePath.toString(), targetPath.toString());
+                    ProcessBuilder processBuilder = new ProcessBuilder("cp", "-a", templatePath.toString(), targetPath.getParent().toString());
                     Process process = processBuilder.start();
                     process.waitFor();
                 } catch (IOException | InterruptedException e) {
