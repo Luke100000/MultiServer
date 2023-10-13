@@ -23,6 +23,10 @@ public class Communication {
     }
 
     public void send(String message) {
-        out.println(message);
+        if (out != null) {
+            out.println(message);
+        } else {
+            MultiServer.LOGGER.error("Failed to send a message to Velocity: " + message);
+        }
     }
 }

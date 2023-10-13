@@ -14,6 +14,7 @@ public final class Config extends JsonConfig {
     public String discordLink = "https://discord.gg/AajGgsKfhn";
     public String discordGuild = "1160515751992639488";
     public int metricsPort = 8000;
+    public boolean hackyFastBoot = true;
 
     public List<Integer> freePorts = List.of(
             25001,
@@ -46,7 +47,7 @@ public final class Config extends JsonConfig {
             "Diamond", "Thanks for being a diamond member!",
             "Gold", "Thanks for being a gold member!",
             "Iron", "Thanks for being an iron member!",
-            "default", "Welcome to the server! Please consider donating at patreon.com/MultiServer to keep this server running! Fancy boni awaits!"
+            "default", "Please consider donating at §6patreon.com/MultiServer§r to keep this server running! Fancy boni awaits!"
     );
     public Map<String, Integer> roleThreads = Map.of(
             "Supporter", 2,

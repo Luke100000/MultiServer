@@ -28,6 +28,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.RegistryDataLoader;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.*;
 import net.minecraft.server.dedicated.DedicatedServer;
@@ -37,6 +38,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.progress.LoggerChunkProgressListener;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
+import net.minecraft.server.packs.resources.CloseableResourceManager;
 import net.minecraft.util.Mth;
 import net.minecraft.util.datafix.DataFixers;
 import net.minecraft.util.worldupdate.WorldUpgrader;
@@ -46,13 +48,12 @@ import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.WorldDimensions;
-import net.minecraft.world.level.levelgen.WorldOptions;
-import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.LevelSummary;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.storage.WorldData;
 import net.minecraft.world.scores.PlayerTeam;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -78,6 +79,8 @@ public class MultiServerManager {
 
     public static String[] args;
     private DedicatedServer lobbyServer;
+
+    private static WorldStem worldStem;
 
     public MultiServerManager() {
         FREE_PORTS.addAll(Config.getInstance().freePorts);
@@ -212,7 +215,6 @@ public class MultiServerManager {
 
         OptionParser optionParser = new OptionParser();
         OptionSpecBuilder demo = optionParser.accepts("demo");
-        OptionSpecBuilder bonusChest = optionParser.accepts("bonusChest");
         OptionSpecBuilder forceUpgrade = optionParser.accepts("forceUpgrade");
         OptionSpecBuilder eraseCache = optionParser.accepts("eraseCache");
         OptionSpecBuilder safeMode = optionParser.accepts("safeMode", "Loads level with vanilla datapack only");
@@ -250,7 +252,11 @@ public class MultiServerManager {
                 MultiServer.LOGGER.warn("Safe mode active, only vanilla datapack will be loaded");
             }
             PackRepository packRepository = ServerPacksSource.createPackRepository(levelStorageAccess);
-            worldStem = getWorldStem(demo, bonusChest, bl, optionSet, dedicatedServerSettings, levelStorageAccess, packRepository);
+            if (Config.getInstance().hackyFastBoot) {
+                worldStem = getWorldStemLite(bl, dedicatedServerSettings, levelStorageAccess, packRepository);
+            } else {
+                worldStem = getWorldStem(bl, dedicatedServerSettings, levelStorageAccess, packRepository);
+            }
 
             RegistryAccess.Frozen frozen = worldStem.registries().compositeAccess();
             if (optionSet.has(forceUpgrade)) {
@@ -273,48 +279,60 @@ public class MultiServerManager {
         }
     }
 
-    private static WorldStem getWorldStem(OptionSpecBuilder demo, OptionSpecBuilder bonusChest, boolean bl, OptionSet optionSet, DedicatedServerSettings dedicatedServerSettings, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository) throws InterruptedException, ExecutionException {
-        WorldStem worldStem;
-        WorldLoader.InitConfig initConfig = loadOrCreateConfig(dedicatedServerSettings.getProperties(), levelStorageAccess, bl, packRepository);
-        worldStem = Util.blockUntilDone(executor -> WorldLoader.load(initConfig, dataLoadContext -> {
-            WorldDimensions worldDimensions;
-            WorldOptions worldOptions;
-            LevelSettings levelSettings;
-            Registry<LevelStem> registry = dataLoadContext.datapackDimensions().registryOrThrow(Registries.LEVEL_STEM);
-            RegistryOps<Tag> dynamicOps = RegistryOps.create(NbtOps.INSTANCE, dataLoadContext.datapackWorldgen());
-            Pair<WorldData, WorldDimensions.Complete> pair = levelStorageAccess.getDataTag(dynamicOps, dataLoadContext.dataConfiguration(), registry, dataLoadContext.datapackWorldgen().allRegistriesLifecycle());
-            if (pair != null) {
-                return new WorldLoader.DataLoadOutput<>(pair.getFirst(), pair.getSecond().dimensionsRegistryAccess());
-            }
-            if (optionSet.has(demo)) {
-                levelSettings = MinecraftServer.DEMO_SETTINGS;
-                worldOptions = WorldOptions.DEMO_OPTIONS;
-                worldDimensions = WorldPresets.createNormalWorldDimensions(dataLoadContext.datapackWorldgen());
-            } else {
-                DedicatedServerProperties dedicatedServerProperties = dedicatedServerSettings.getProperties();
-                levelSettings = new LevelSettings(dedicatedServerProperties.levelName, dedicatedServerProperties.gamemode, dedicatedServerProperties.hardcore, dedicatedServerProperties.difficulty, false, new GameRules(), dataLoadContext.dataConfiguration());
-                worldOptions = optionSet.has(bonusChest) ? dedicatedServerProperties.worldOptions.withBonusChest(true) : dedicatedServerProperties.worldOptions;
-                worldDimensions = dedicatedServerProperties.createDimensions(dataLoadContext.datapackWorldgen());
-            }
-            WorldDimensions.Complete complete = worldDimensions.bake(registry);
-            Lifecycle lifecycle = complete.lifecycle().add(dataLoadContext.datapackWorldgen().allRegistriesLifecycle());
-            return new WorldLoader.DataLoadOutput<>(new PrimaryLevelData(levelSettings, worldOptions, complete.specialWorldProperty(), lifecycle), complete.dimensionsRegistryAccess());
-        }, WorldStem::new, Util.backgroundExecutor(), executor)).get();
-        return worldStem;
+    public static WorldLoader.DataLoadContext loadContext(WorldLoader.InitConfig initConfig) {
+        Pair<WorldDataConfiguration, CloseableResourceManager> pair = initConfig.packConfig().createResourceManager();
+        CloseableResourceManager closeableResourceManager = worldStem.resourceManager();
+        RegistryAccess.Frozen frozen = worldStem.registries().getAccessForLoading(RegistryLayer.DIMENSIONS);
+        RegistryAccess.Frozen frozen2 = RegistryDataLoader.load(closeableResourceManager, frozen, RegistryDataLoader.DIMENSION_REGISTRIES);
+        WorldDataConfiguration worldDataConfiguration = pair.getFirst();
+        return new WorldLoader.DataLoadContext(closeableResourceManager, worldDataConfiguration, frozen, frozen2);
     }
 
-    private static WorldLoader.InitConfig loadOrCreateConfig(DedicatedServerProperties dedicatedServerProperties, LevelStorageSource.LevelStorageAccess levelStorageAccess, boolean bl, PackRepository packRepository) {
+    private static WorldStem getWorldStem(boolean safeMode, DedicatedServerSettings dedicatedServerSettings, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository) throws InterruptedException, ExecutionException {
+        WorldLoader.InitConfig initConfig = loadOrCreateConfig(dedicatedServerSettings.getProperties(), levelStorageAccess, safeMode, packRepository);
+        return Util.blockUntilDone(executor -> WorldLoader.load(initConfig, dataLoadContext -> {
+            return getWorldDataDataLoadOutput(dedicatedServerSettings, levelStorageAccess, dataLoadContext);
+        }, WorldStem::new, Util.backgroundExecutor(), executor)).get();
+    }
+
+    private static WorldStem getWorldStemLite(boolean safeMode, DedicatedServerSettings dedicatedServerSettings, LevelStorageSource.LevelStorageAccess levelStorageAccess, PackRepository packRepository) {
+        WorldLoader.InitConfig initConfig = loadOrCreateConfig(dedicatedServerSettings.getProperties(), levelStorageAccess, safeMode, packRepository);
+        WorldLoader.DataLoadContext dataLoadContext = loadContext(initConfig);
+        WorldLoader.DataLoadOutput<WorldData> output = getWorldDataDataLoadOutput(dedicatedServerSettings, levelStorageAccess, dataLoadContext);
+        return new WorldStem(worldStem.resourceManager(), worldStem.dataPackResources(), worldStem.registries(), output.cookie());
+    }
+
+    @NotNull
+    private static WorldLoader.DataLoadOutput<WorldData> getWorldDataDataLoadOutput(DedicatedServerSettings settings, LevelStorageSource.LevelStorageAccess levelStorageAccess, WorldLoader.DataLoadContext dataLoadContext) {
+        // Try to load world
+        Registry<LevelStem> registry = dataLoadContext.datapackDimensions().registryOrThrow(Registries.LEVEL_STEM);
+        RegistryOps<Tag> dynamicOps = RegistryOps.create(NbtOps.INSTANCE, dataLoadContext.datapackWorldgen());
+        Pair<WorldData, WorldDimensions.Complete> pair = levelStorageAccess.getDataTag(dynamicOps, dataLoadContext.dataConfiguration(), registry, dataLoadContext.datapackWorldgen().allRegistriesLifecycle());
+        if (pair != null) {
+            return new WorldLoader.DataLoadOutput<>(pair.getFirst(), pair.getSecond().dimensionsRegistryAccess());
+        }
+
+        // Create new world
+        DedicatedServerProperties dedicatedServerProperties = settings.getProperties();
+        LevelSettings levelSettings = new LevelSettings(dedicatedServerProperties.levelName, dedicatedServerProperties.gamemode, dedicatedServerProperties.hardcore, dedicatedServerProperties.difficulty, false, new GameRules(), dataLoadContext.dataConfiguration());
+        WorldDimensions worldDimensions = dedicatedServerProperties.createDimensions(dataLoadContext.datapackWorldgen());
+        WorldDimensions.Complete complete = worldDimensions.bake(registry);
+        Lifecycle lifecycle = complete.lifecycle().add(dataLoadContext.datapackWorldgen().allRegistriesLifecycle());
+        return new WorldLoader.DataLoadOutput<>(new PrimaryLevelData(levelSettings, dedicatedServerProperties.worldOptions, complete.specialWorldProperty(), lifecycle), complete.dimensionsRegistryAccess());
+    }
+
+    private static WorldLoader.InitConfig loadOrCreateConfig(DedicatedServerProperties dedicatedServerProperties, LevelStorageSource.LevelStorageAccess levelStorageAccess, boolean safeMode, PackRepository packRepository) {
         WorldDataConfiguration worldDataConfiguration2;
-        boolean bl2;
+        boolean initMode;
         WorldDataConfiguration worldDataConfiguration = levelStorageAccess.getDataConfiguration();
         if (worldDataConfiguration != null) {
-            bl2 = false;
+            initMode = false;
             worldDataConfiguration2 = worldDataConfiguration;
         } else {
-            bl2 = true;
+            initMode = true;
             worldDataConfiguration2 = new WorldDataConfiguration(dedicatedServerProperties.initialDataPackConfiguration, FeatureFlags.DEFAULT_FLAGS);
         }
-        WorldLoader.PackConfig packConfig = new WorldLoader.PackConfig(packRepository, worldDataConfiguration2, bl, bl2);
+        WorldLoader.PackConfig packConfig = new WorldLoader.PackConfig(packRepository, worldDataConfiguration2, safeMode, initMode);
         return new WorldLoader.InitConfig(packConfig, Commands.CommandSelection.DEDICATED, dedicatedServerProperties.functionPermissionLevel);
     }
 
@@ -416,5 +434,11 @@ public class MultiServerManager {
 
     public void tick() {
         healthMonitor.tick();
+    }
+
+    public void updateWorldStem(WorldStem worldStem) {
+        if (MultiServerManager.worldStem == null) {
+            MultiServerManager.worldStem = worldStem;
+        }
     }
 }
