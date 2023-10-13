@@ -3,7 +3,10 @@
   "minVersion": "0.8",
   "package": "net.conczin.multiserver.mixin",
   "compatibilityLevel": "JAVA_17",
-  "mixins": ["ChunkMapMixin", "MainMixin", "MinecraftServerMixin", "PlayerListMixin", "BiomeModificationImlMixin"],
+  "mixins": [
+    "BiomeModificationImlMixin", "ChunkMapMixin", "MainMixin", "MinecraftServerMixin", "PlayerListMixin",
+    "command.DifficultyCommandMixin", "command.GameModeCommandMixin"
+  ],
   "client": [
   ],
   "injectors": {

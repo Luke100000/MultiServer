@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.DataFixer;
 import com.mojang.logging.LogUtils;
+import net.conczin.multiserver.Config;
 import net.conczin.multiserver.server.dynamic.DynamicManager;
 import net.conczin.multiserver.server.dynamic.SleepManager;
 import net.minecraft.*;
@@ -361,7 +362,7 @@ public class CoMinecraftServer extends MinecraftServer implements ServerInterfac
     }
 
     public int getOperatorUserPermissionLevel() {
-        return 2;
+        return Config.getInstance().ownerOpLevel;
     }
 
     public int getFunctionCompilationLevel() {

@@ -88,6 +88,10 @@ public class ServerCommands {
                         .executes(ServerCommands::printPerformance)));
     }
 
+    private static void register(LiteralArgumentBuilder<CommandSourceStack> command) {
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(command));
+    }
+
     private static int printPerformance(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         ServerSettings settings = PlayerDataManager.getPlayerData(context.getSource().getPlayerOrException().getUUID()).getSettings();
         context.getSource().sendSuccess(() -> Component.literal(String.format(
@@ -138,10 +142,6 @@ public class ServerCommands {
     private static int leaveServer(CommandContext<CommandSourceStack> context) {
         teleportToServer(context, "lobby");
         return 0;
-    }
-
-    private static void register(LiteralArgumentBuilder<CommandSourceStack> command) {
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(command));
     }
 
     private static int inviteUser(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {

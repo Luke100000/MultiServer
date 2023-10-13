@@ -59,7 +59,7 @@ public class PlayerData extends TidySavedData {
 
         if (profileCache != null) {
             // Owner and Moderators will be op
-            if (Config.getInstance().opOwners) {
+            if (Config.getInstance().ownerOpLevel > 0) {
                 profileCache.get(uuid).ifPresent(profile -> {
                     if (permissionGroup == PermissionGroup.OWNER || permissionGroup == PermissionGroup.MODERATOR) {
                         server.getPlayerList().op(profile);
