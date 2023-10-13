@@ -1,5 +1,6 @@
 package net.conczin.multiserver.data;
 
+import net.conczin.multiserver.Config;
 import net.conczin.multiserver.MultiServer;
 import net.conczin.multiserver.server.CoMinecraftServer;
 import net.conczin.multiserver.server.ServerSettings;
@@ -58,13 +59,15 @@ public class PlayerData extends TidySavedData {
 
         if (profileCache != null) {
             // Owner and Moderators will be op
-            profileCache.get(uuid).ifPresent(profile -> {
-                if (permissionGroup == PermissionGroup.OWNER || permissionGroup == PermissionGroup.MODERATOR) {
-                    server.getPlayerList().op(profile);
-                } else {
-                    server.getPlayerList().deop(profile);
-                }
-            });
+            if (Config.getInstance().opOwners) {
+                profileCache.get(uuid).ifPresent(profile -> {
+                    if (permissionGroup == PermissionGroup.OWNER || permissionGroup == PermissionGroup.MODERATOR) {
+                        server.getPlayerList().op(profile);
+                    } else {
+                        server.getPlayerList().deop(profile);
+                    }
+                });
+            }
 
             // Guests will be in adventure mode
             if (permissionGroup == PermissionGroup.GUEST) {
