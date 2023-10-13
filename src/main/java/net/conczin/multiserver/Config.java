@@ -14,6 +14,7 @@ public final class Config extends JsonConfig {
     public String discordLink = "https://discord.gg/AajGgsKfhn";
     public String discordGuild = "1160515751992639488";
     public int metricsPort = 8000;
+    public int ticksUntilSleep = 20 * 60;
     public boolean hackyFastBoot = true;
 
     public List<Integer> freePorts = List.of(
