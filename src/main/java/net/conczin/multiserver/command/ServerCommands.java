@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.conczin.multiserver.Config;
 import net.conczin.multiserver.MultiServer;
 import net.conczin.multiserver.RoleAPI;
 import net.conczin.multiserver.data.PermissionGroup;
@@ -48,13 +49,13 @@ public class ServerCommands {
                         .executes(ServerCommands::help))
 
                 .then(Commands.literal("start")
-                        .requires(commandSourceStack -> commandSourceStack.hasPermission(2))
+                        .requires(commandSourceStack -> commandSourceStack.hasPermission(Config.getInstance().msOpLevel))
                         .then(Commands.argument("root", StringArgumentType.word())
                                 .then(Commands.argument("port", IntegerArgumentType.integer(1024, 65535))
                                         .executes(ServerCommands::startServer))))
 
                 .then(Commands.literal("stop")
-                        .requires(commandSourceStack -> commandSourceStack.hasPermission(2))
+                        .requires(commandSourceStack -> commandSourceStack.hasPermission(Config.getInstance().msOpLevel))
                         .then(Commands.argument("root", StringArgumentType.word())
                                 .executes(ServerCommands::stopServer)))
 
