@@ -3,18 +3,20 @@ package net.conczin.multiserver;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.apache.commons.io.IOUtils;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class RoleAPI {
-    private static final long CACHE_DURATION = 20 * 1000;
     private final Gson Gson = new Gson();
 
     public static final RoleAPI INSTANCE = new RoleAPI();
@@ -23,34 +25,14 @@ public class RoleAPI {
         return INSTANCE;
     }
 
-    private final Map<String, UserRoles> roles = new ConcurrentHashMap<>();
-
     public void get(String uuid, Consumer<UserRoles> callback) {
-        if (roles.containsKey(uuid)) {
-            UserRoles roles = this.roles.get(uuid);
-            callback.accept(roles);
-
-            // Update in the background
-            if (roles.expired()) {
-                CompletableFuture.supplyAsync(() -> {
-                    fetchUserData(uuid);
-                    return 0;
-                });
-            }
-        } else {
-            CompletableFuture.supplyAsync(() -> {
-                fetchUserData(uuid, callback);
-                return 0;
-            });
-        }
-    }
-
-    private void fetchUserData(String uuid) {
-        fetchUserData(uuid, r -> {
+        CompletableFuture.supplyAsync(() -> {
+            fetchUserData(uuid, callback);
+            return 0;
         });
     }
 
-    private void fetchUserData(String uuid, Consumer<UserRoles> callback) {
+    private void fetchUserData(String uuid, Consumer<@Nullable UserRoles> callback) {
         try {
             // Construct the URL for the API request
             URL url = new URL("https://api.conczin.net/v1/minecraft/" + Config.getInstance().discordGuild + "/" + uuid.replace("-", ""));
@@ -79,7 +61,6 @@ public class RoleAPI {
                 }
 
                 UserRoles userRoles = new UserRoles(roles, linked);
-                this.roles.put(uuid, userRoles);
                 callback.accept(userRoles);
             } else {
                 System.err.println("HTTP Request failed with response code: " + responseCode);
@@ -93,22 +74,16 @@ public class RoleAPI {
 
     public static class UserRoles {
         private final Set<String> roles;
-        private final long lastUpdated;
         private final boolean linked;
         private final String bestRole;
 
         public UserRoles(Set<String> roles, boolean linked) {
             this.roles = roles;
-            this.lastUpdated = System.currentTimeMillis();
             this.bestRole = roles.stream()
                     .filter(r -> Config.getInstance().roleViewDistance.containsKey(r))
                     .max(Comparator.comparingInt(r -> Config.getInstance().roleViewDistance.getOrDefault(r, 0)))
                     .orElse("default");
             this.linked = linked;
-        }
-
-        public boolean expired() {
-            return System.currentTimeMillis() - lastUpdated > CACHE_DURATION;
         }
 
         public Set<String> getRoles() {

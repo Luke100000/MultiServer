@@ -16,7 +16,7 @@ public final class Config extends JsonConfig {
     public int metricsPort = 8000;
     public int ticksUntilSleep = 20 * 60;
     public boolean hackyFastBoot = true;
-    public boolean opOwners = true;
+    public boolean opOwners = false;
     public int msOpLevel = 4;
 
     public List<Integer> freePorts = List.of(

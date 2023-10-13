@@ -74,6 +74,12 @@ public class PlayerData extends TidySavedData {
                 getPlayer(server, uuid).ifPresent(player -> {
                     player.setGameMode(GameType.ADVENTURE);
                 });
+            } else {
+                getPlayer(server, uuid).ifPresent(player -> {
+                    if (player.gameMode.getGameModeForPlayer() == GameType.ADVENTURE) {
+                        player.setGameMode(GameType.SURVIVAL);
+                    }
+                });
             }
 
             // Non-member will get kicked, they should not be here in the first place
