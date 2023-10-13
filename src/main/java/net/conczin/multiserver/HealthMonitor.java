@@ -77,7 +77,9 @@ public class HealthMonitor {
     public void tick() {
         if (lastTick / MS_PER_UPDATE != System.currentTimeMillis() / MS_PER_UPDATE) {
             lastTick = System.currentTimeMillis();
-            lastMinimumMemory = currentMinimumMemory;
+            if (currentMinimumMemory != Long.MAX_VALUE) {
+                lastMinimumMemory = currentMinimumMemory;
+            }
             currentMinimumMemory = Long.MAX_VALUE;
         }
         currentMinimumMemory = Math.min(currentMinimumMemory, Runtime.getRuntime().freeMemory());
